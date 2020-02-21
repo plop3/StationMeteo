@@ -42,7 +42,7 @@ Adafruit_SI1145 uv = Adafruit_SI1145();
 float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT;
 int cloudy, dewing, frezzing;
 
-float UVindex;
+float UVindex, ir;
 int luminosite;
 
 void setup() {
@@ -85,7 +85,7 @@ void loop() {
   luminosite=lightSensor.readLightLevel();
 
   // Index UV
-  float ir = uv.readIR();   
+  ir = uv.readIR();   
   UVindex = uv.readUV()*RP_UV;   
   UVindex /= 100.0;
 
@@ -101,6 +101,7 @@ void loop() {
   Serial.println("Text="+String(Tp));
   Serial.println("Hext="+String(HR));
   Serial.println("Pres="+String(P/100));
+  Serial.println("IR="+String(ir));
   Serial.println("Dew="+String(Dew));
   Serial.println("UV="+String(UVindex));
   Serial.println("Lux="+String(luminosite));
