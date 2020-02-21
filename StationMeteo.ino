@@ -1,251 +1,142 @@
-/*
-  Station météo V2
-  Version:  2.00.01
-  Date:     10/02/2020 - 13/02/2020
-  Auteur:   Serge CLAUS
-  Licence:  GPL V3
-*/
-
-//-----------------------------------------------
-// Librairies
-//-----------------------------------------------
-#include <WiFi.h>
-#include <WiFiMulti.h>
-#include <ESPmDNS.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
-// Timers
-#include <SimpleTimer.h>
-// Client http
-#include <HTTPClient.h>
-
-#include <Wire.h>
-#include <SPI.h>
-#include <Adafruit_Sensor.h>
-// SQM
-#include <FreqMeasure.h>
-#include <Math.h>
-// BME280
-#include <Adafruit_BME280.h>
-//Serveur Web
-#include <WebServer.h>
-// Json
-#include <ArduinoJson.h>
-//MLX90614
-#include <Adafruit_MLX90614.h>
-// Mod1016
-#include <AS3935.h>
-// DHT22
-#include "DHT.h"
-// BH1750 Luminosité
-#include <BH1750.h>
-//SI1145
-#include "Adafruit_SI1145.h"
-//MLX90614
-#include <Adafruit_MLX90614.h>
-
-// Fichiers externes
 #include "StationMeteo.h"
 
-//-----------------------------------------------
-// Macros
-//-----------------------------------------------
-// BME280
-#define BME280ADDR  0x76
-#define SEALEVELPRESSURE_HPA (1020.5)
-
-// MLX90614
-//Formula Tcorrection = (K1 / 100) * (Thr - K2 / 10) + (K3 / 100) * pow((exp (K4 / 1000* Thr)) , (K5 / 100));   
-#define  K1 33.   
-#define  K2 0.   
-#define  K3 4.   
-#define  K4 100. 
-#define K5 100.
-#define CLOUD_TEMP_CLEAR -8
-#define CLOUD_TEMP_OVERCAST 0
-#define CLOUD_FLAG_PERCENT 30
-
-// Capteur de pluie
-#define PinPluie 3	// TODO
-// DHT22
-#define DHTPIN 2	// PIN DHT22	TODO
-#define DHTTYPE DHT22	// Type DTH (11/22)
-// Luminosité
-#define ID_LIGHT 10	// Luminosité en Lux
-// Index UV
-#define ID_UV 11	// Indice UV
-#define RP_UV 1.3	// Multiplicateur index UV (du au cache dépoli)
-#define ID_IR 12
-#define ID_VI 13
-// MOD-1016
-#define ID_ORAGED 3	// Distance de l'éclair
-#define ID_ORAGEI 4	// Intensité de l'éclair
-#define ID_ORAGEC 5	// Interrupteur compteur d'orage (Envoi "On" à chaque éclair)
-#define IRQ_ORAGE 18	// PIN IRQ (18 boitier externe, 19 boitier station)
-// SQM TODO
-#define SQMPin	4	// PIN du capteur SQM
-//-----------------------------------------------
-// Activation des modules
-//-----------------------------------------------
-// WiFi
-WiFiMulti wifiMulti;
-//Serveur Web
-WebServer server(80);
-// Timer
+#include <SimpleTimer.h>
 SimpleTimer timer;
 
+// MLX
+#define  K1 33.
+#define  K2 0.
+#define  K3 4.
+#define  K4 100.
+#define  K5 100.
 
-// BME 280
-Adafruit_BME280 bme; // I2C
-// MLX90614
+#include "Adafruit_MLX90614.h"
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
-// Luminosité
+
+// BME280
+#include "Adafruit_BME280.h"
+Adafruit_BME280 bme;
+
+// BH1750 Luminosité
+#include <BH1750.h>
 BH1750 lightSensor;
-// SI1145
+
+// SI1145 UV
+#include "Adafruit_SI1145.h" 
 Adafruit_SI1145 uv = Adafruit_SI1145();
-// DHT22
-DHT dht(DHTPIN, DHTTYPE);
-// Capteur de pluie
 
-//-----------------------------------------------
-// Variables globales
-//-----------------------------------------------
-/*
-  0:  Gtemp		Température
-  1:  Gpress	Pression athmosphérique
-  2:  Ghum		Humidité
-  3:  Grain		Pluviomètre
-  4:  Gpluie	Capteur de pluie (TOR)				TODO
-  5:  Gvent		Vent
-  6:  Graf		Rafales
-  7:  Gnuage	Couverture nuageuse (MLX)
-  8:  GTciel	Température du ciel (MLX)			TODO
-  9:  Gsqm		Qualité du ciel SQM					TODO
-  10:  Guv		Index UV							TODO
-  11: Glum		Luminosité							TODO
-  12: GdistO	Distance orage						TODO
-  13: GintO		Intensité orage						TODO
-  14: GdirV		Direction du vent					TODO
-  15: GTabri	Température de l'abri	(DHT22)		TODO
-  16: GHabri	Humidité de l'abri 		(DHT22)		TODO
-*/
-float Gtemp, Ghum, Gpress, Grain, Gvent, Graf, Gnuage, GTciel, Gsqm, Guv, Glum, GdistO, GintO, GdirV;
-bool Gpluie=false;
+// Mod1016 
+#include <AS3935.h>  
 
-// Chaine json
-StaticJsonDocument<2048> doc;
+// 1wire 
+#include <DallasTemperature.h> 
+#include <OneWire.h>
 
-// MLX90614
-int cloudy;
-float Clouds;
-float CouvNuages;
+//Clear sky corrected temperature (temp below means 0% clouds)
+#define CLOUD_TEMP_CLEAR  -8
+//Totally cover sky corrected temperature (temp above means 100% clouds)
+#define CLOUD_TEMP_OVERCAST  0
+//Activation treshold for cloudFlag (%)
+#define CLOUD_FLAG_PERCENT  30
 
-//-----------------------------------------------
-// Setup
-//-----------------------------------------------
+float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT;
+int cloudy, dewing, frezzing;
+
+float UVindex;
+int luminosite;
+
 void setup() {
-  // Port série
-  Serial.begin(SERIALBAUD);
-  Serial.println("Booting");
-
-  // WiFi
-  wifiMulti.addAP("astro", "pwd");
-  wifiMulti.addAP("maison", "pwd");
-  while (wifiMulti.run() != WL_CONNECTED) {
-    Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
-    ESP.restart();
-  }
-//-----------------------------------------------
-  // OTA
-  ArduinoOTA.setHostname("stationmeteo");
-  ArduinoOTA
-  .onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
-    else // U_SPIFFS
-      type = "filesystem";
-
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    Serial.println("Start updating " + type);
-  })
-  .onEnd([]() {
-    Serial.println("\nEnd");
-  })
-  .onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  })
-  .onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
-  });
-  ArduinoOTA.begin();
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-//-----------------------------------------------
-  // Serveur Web
-  server.on("/status", webStatus);
-  server.on("/meteo", webMeteo);
-  server.begin();
-
-  // Timers
-  timer.setInterval(10000L, infoPluie);   // Lecture du capteur de pluie TOR toutes les 10s
-  timer.setInterval(30000L, infoMeteo);	  // Lecture des capteurs toutes les 30s
-  timer.setInterval(180000L, envoiHTTP);   // Envoie les infos météo au serveur Domoticz toutes les 3 mn
-
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  // MLX
+  mlx.begin();
   // BME280
   bme.begin(0x76);
-  //MLX (Ciel) 
-  mlx.begin();
-  // DHT22
-  dht.begin();
-  //BH1750
-  lightSensor.begin();
-  //SI1145
-  uv.begin();
-  // Pluie
-  pinMode(PinPluie,INPUT);
-  //attachInterrupt(digitalPinToInterrupt(PinPluie),pluie,FALLING);
-  // MOD61016
-  Wire.begin();
-  mod1016.init(IRQ_ORAGE);
-  delay(2);
-  autoTuneCaps(IRQ_ORAGE);
-  delay(2);
-  //mod1016.setTuneCaps(6);
-  //delay(2);
-  mod1016.setOutdoors();
-  delay(2);
-  mod1016.setNoiseFloor(4); 	// Valeur par defaut 5
-  pinMode(IRQ_ORAGE, INPUT);
-  attachInterrupt(digitalPinToInterrupt(IRQ_ORAGE), orage, RISING);
-  mod1016.getIRQ();
-  // Envoi des premières mesures
-  infoMeteo();
-  envoiHTTP();
+  // Timers
+  timer.setInterval(60000L, infoMeteo);	  // Lecture des capteurs toutes les 30s
 }
 
-//-----------------------------------------------
-// Boucle principale
-//-----------------------------------------------
 void loop() {
-  // OTA
-  ArduinoOTA.handle();
-  // Timers
+  // Maj 
   timer.run();
-  // Serveur Web
-  server.handleClient();
-    // MOD1016
-  if (detected) {
-    translateIRQ(mod1016.getIRQ());
-    detected = false;
+  // MLX
+  Tir = mlx.readAmbientTempC();
+  IR = mlx.readObjectTempC();
+  Clouds = cloudIndex();
+  skyT = skyTemp();
+  if (Clouds > CLOUD_FLAG_PERCENT) {
+    cloudy = 1;
+  } else {
+    cloudy = 0;
   }
-  // Capteur de pluie TODO
+
+  // BME280
+  Tp = bme.readTemperature();
+  P = bme.readPressure();
+  HR = bme.readHumidity();
+  Dew = dewPoint(Tp, HR);
+    if (Tp <= Dew + 2) {
+      dewing = 1;
+    } else {
+      dewing = 0;
+    }
   
+  // Luminosité
+  luminosite=lightSensor.readLightLevel();
+
+  // Index UV
+  float ir = uv.readIR();   
+  UVindex = uv.readUV()*RP_UV;   
+  UVindex /= 100.0;
+
+  // T° sol
+  // 10cm
+  // 1m
+
+  // H% sol
+
+  // Envoi des données:
+  Serial.println("Tciel="+String(skyT));
+  Serial.println("CouvN="+String(Clouds));
+  Serial.println("Text="+String(Tp));
+  Serial.println("Hext="+String(HR));
+  Serial.println("Pres="+String(P/100));
+  Serial.println("Dew="+String(Dew));
+  Serial.println("UV="+String(UVindex));
+  Serial.println("Lux="+String(luminosite));
+  //Serial.println("SQM=20.3");
+  //Serial.println("Vent=15");
+  delay(5000);
+}
+
+// dewPoint function NOAA
+// reference: http://wahiduddin.net/calc/density_algorithms.htm
+double dewPoint(double celsius, double humidity)
+{
+  double A0 = 373.15 / (273.15 + celsius);
+  double SUM = -7.90298 * (A0 - 1);
+  SUM += 5.02808 * log10(A0);
+  SUM += -1.3816e-7 * (pow(10, (11.344 * (1 - 1 / A0))) - 1);
+  SUM += 8.1328e-3 * (pow(10, (-3.49149 * (A0 - 1))) - 1);
+  SUM += log10(1013.246);
+  double VP = pow(10, SUM - 3) * humidity;
+  double T = log(VP / 0.61078); // temp var
+  return (241.88 * T) / (17.558 - T);
+}
+
+double skyTemp() {
+  //Constant defined above
+  double Td = (K1 / 100.) * (T - K2 / 10) + (K3 / 100.) * pow((exp (K4 / 1000.* T)) , (K5 / 100.));
+  double Tsky = IR - Td;
+  return Tsky;
+}
+
+double cloudIndex() {
+  double Tcloudy = CLOUD_TEMP_OVERCAST, Tclear = CLOUD_TEMP_CLEAR;
+  double Tsky = skyTemp();
+  double Index;
+  if (Tsky < Tclear) Tsky = Tclear;
+  if (Tsky > Tcloudy) Tsky = Tcloudy;
+  Index = (Tsky - Tclear) * 100 / (Tcloudy - Tclear);
+  return Index;
 }
