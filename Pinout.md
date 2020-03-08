@@ -7,7 +7,8 @@ D5:	Orage
 D6:	Détecteur de pluie
 D7:	Anémomètre
 D3:	1wire	T° sol		/!\ Tester 1wire
-	Girouette ?
+TX:	Girouette (Arduino Nano)
+RX:
 
 Dispo:
 D0	
