@@ -1,2 +1,2 @@
 # StationMeteo
-Station météo ESP32
+Station météo ESP8266
