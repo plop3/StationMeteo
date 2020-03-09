@@ -13,6 +13,10 @@ SimpleTimer timer;
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 
+// Client Web
+#include <ESP8266HTTPClient.h>
+HTTPClient http;
+
 #ifndef STASSID
 #define STASSID "astro"
 #define STAPSK  "B546546AF0"
@@ -120,7 +124,7 @@ void setup() {
   // BME280
   bme.begin(0x76);
   // Timers
-  timer.setInterval(60000L, infoMeteo);	  // Lecture des capteurs toutes les 30s
+  timer.setInterval(60000L, infoMeteo);	  // Lecture des capteurs toutes les 60s
 
   //BH1750
   lightSensor.begin();
