@@ -8,8 +8,10 @@ void infoMeteo() {
 
   // Lecture des capteurs
   mesureCapteurs();
+
+  CountBak++;
   // Sauvegarde des données journalière
-  if (CountBak>=1440) { //1440 minutes=24H
+  if (CountBak>1440) { //1440 minutes=24H
     CountBak=0;
     EEPROM.put(4, CountRain);
   }
