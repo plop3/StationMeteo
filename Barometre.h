@@ -23,4 +23,4 @@ float pressureAvg;
 // average after 2 hours is used as reference value for the next iteration.
 float pressureAvg2;
 float dP_dt;
-int forecast=0;
+int forecast = 0;

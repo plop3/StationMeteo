@@ -17,6 +17,9 @@ SimpleTimer timer;
 #include <ESP8266HTTPClient.h>
 HTTPClient http;
 
+// EEprom
+#include <EEPROM.h>
+
 #ifndef STASSID
 #define STASSID "astro"
 #define STAPSK  "B546546AF0"
@@ -65,6 +68,9 @@ ESP8266WebServer server ( 80 );
 
 float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT, Wind, Rain;
 int cloudy, dewing, frezzing;
+// Pluie
+unsigned int CountRain=0;
+int CountBak=0;
 
 float UVindex, ir;
 int luminosite;
@@ -119,13 +125,26 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  // Lecture des données de l'eeprom
+  // L'adresse 0 doit correspondre à 24046 Sinon, initialisation des valeurs
+  int Magic;
+  EEPROM.get(0, Magic);
+  if (Magic != 24046) {
+    // Initialisation des valeurs
+    Magic=2406;
+    EEPROM.put(0, Magic);
+    EEPROM.put(4,CountRain);
+  }
+  else {
+    // Sinon, récupération des données
+    EEPROM.get(4,CountRain);
+  }
   // MLX
   mlx.begin();
   // BME280
   bme.begin(0x76);
   // Timers
-  timer.setInterval(60000L, infoMeteo);	  // Lecture des capteurs toutes les 60s
-
+  timer.setInterval(60000L, infoMeteo);	  // Mise à jour des données barométriques et envoi des infos à Domoticz
   //BH1750
   lightSensor.begin();
 
@@ -144,56 +163,7 @@ void loop() {
   server.handleClient();
   // Maj
   timer.run();
-  // MLX
-  Tir = mlx.readAmbientTempC();
-  IR = mlx.readObjectTempC();
-  Clouds = cloudIndex();
-  skyT = skyTemp();
-  if (Clouds > CLOUD_FLAG_PERCENT) {
-    cloudy = 1;
-  } else {
-    cloudy = 0;
-  }
-
-  // BME280
-  Tp = bme.readTemperature();
-  P = bme.readPressure();
-  HR = bme.readHumidity();
-  Dew = dewPoint(Tp, HR);
-  if (Tp <= Dew + 2) {
-    dewing = 1;
-  } else {
-    dewing = 0;
-  }
-
-  // Luminosité
-  luminosite = lightSensor.readLightLevel();
-
-
-  // Index UV
-  ir = uv.readIR();
-  UVindex = uv.readUV() * RP_UV;
-  UVindex /= 100.0;
-
-  // T° sol
-  // 10cm
-  // 1m
-
-  // H% sol
-
-  // Envoi des données:
-  Serial.println("Tciel=" + String(skyT));
-  Serial.println("CouvN=" + String(Clouds));
-  Serial.println("Text=" + String(Tp));
-  Serial.println("Hext=" + String(HR));
-  Serial.println("Pres=" + String(P / 100));
-  //  Serial.println("IR=" + String(ir));
-  Serial.println("Dew=" + String(Dew));
-  Serial.println("UV=" + String(UVindex));
-  Serial.println("Lux=" + String(luminosite));
-  //Serial.println("SQM=20.3");
-  //Serial.println("Vent=15");
-  delay(500);
+  //delay(500);
 }
 
 // dewPoint function NOAA
@@ -229,6 +199,6 @@ double cloudIndex() {
 }
 
 void watchInfo() {
-  String Page = "Tciel=" + String(skyT) + "\nCouvN=" + String(Clouds) + "\nText=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew)+"\nlum="+String(luminosite)+"\nUV="+String(UVindex)+"\nIR="+String(ir);
+  String Page = "Tciel=" + String(skyT) + "\nCouvN=" + String(Clouds) + "\nText=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\nlum=" + String(luminosite) + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
   server.send ( 200, "text/plain", Page);
 }
