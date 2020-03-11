@@ -59,6 +59,14 @@ Adafruit_SI1145 uv = Adafruit_SI1145();
 // Serveur Web
 ESP8266WebServer server ( 80 );
 
+// Client Web
+HTTPClient http;
+
+// Pluviomètre
+pinMode(PINrain, INPUT);
+attachInterrupt(pinrain, RainCount, RISING);
+
+
 //Clear sky corrected temperature (temp below means 0% clouds)
 #define CLOUD_TEMP_CLEAR  -8
 //Totally cover sky corrected temperature (temp above means 100% clouds)
@@ -70,7 +78,10 @@ float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clou
 int cloudy, dewing, frezzing;
 // Pluie
 unsigned int CountRain=0;
+unsigned int PrevCountRain=0;
 int CountBak=0;
+bool updateRain=true;
+unsigned long PrevTime;
 
 float UVindex, ir;
 int luminosite;
@@ -138,6 +149,7 @@ void setup() {
   else {
     // Sinon, récupération des données
     EEPROM.get(4,CountRain);
+	PrevCountRain=CountRain;
   }
   // MLX
   mlx.begin();
@@ -164,6 +176,15 @@ void loop() {
   // Maj
   timer.run();
   //delay(500);
+  if (updateRain) {
+	  // Envoi des infos à Domoticz
+	  // TODO Calcul du rain rate
+	int RainRate=100;	//mm*100
+	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" String(RainRate)+";"+ String(CountRain/100.0));
+    http.GET();
+    http.end();
+	  updateRain=false;
+  }
 }
 
 // dewPoint function NOAA

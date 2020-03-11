@@ -76,8 +76,7 @@ void mesureCapteurs() {
 
 void envoiHTTP() {
   // Baromètre
-  HTTPClient http;
-  if (http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3556&nvalue=0&svalue=" + String(Tp) + ";" + String(HR) + ";0;" + String(P / 100) + ";" + String(forecast))) {
+    if (http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3556&nvalue=0&svalue=" + String(Tp) + ";" + String(HR) + ";0;" + String(P / 100) + ";" + String(forecast))) {
     http.GET();
     http.end();
     // T° du ciel, couverture nuageuse
@@ -98,3 +97,9 @@ void envoiHTTP() {
   }
 }
 //-----------------------------------------------
+
+void rainCount() {
+		// Incrémente le compteur de pluie
+		CountRain+=Plevel;
+		updateRain=true;
+}
