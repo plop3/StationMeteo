@@ -7,3 +7,7 @@ TODO
 - Ajout Arduino Nano(NRF ?)/mini pour la girouette
 - Girouette (Nano)
 - Détection de poussière (Nano)
+
+Pluviomètre:
+Ajout rain rate (à finir)
+Quand la pluie a cessé depuis X minutes, mettre le rain rate à 0 et envoyer à Domoticz
