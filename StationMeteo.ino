@@ -118,6 +118,7 @@ unsigned char sa,sb,sd,se;
 unsigned int sc,sf, pin;
 String tx20RawDataS = "";
 unsigned int Wind, Gust, Dir, DirS;
+unsigned float WindChild, WindKMS;
 const char *DirT[]={'N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'};
 
 // Divers
@@ -278,6 +279,13 @@ void loop() {
 		Gust=sa;
 		Dir=sb*22.5;
 		DirS=sb;
+		float WindKMH=Wind*0.36;
+		if (WindKMH<4.8) {
+			WindChild=Tp+0.2*(0.1345*Tp-1.59)*WindKMH;
+		}
+		else {
+			WindChild=13.12+0.6215*Tp+(0.3965*Tp-11.37)*WindKMH;
+		}
 	}
   }	  
 }                                                                                                                                           

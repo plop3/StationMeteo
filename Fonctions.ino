@@ -130,7 +130,7 @@ void envoiHTTP() {
     http.GET();
     http.end();
 	// Anémomètre
-	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3570&nvalue=0&svalue=" + String(Dir)+";"+DirT[DirS]+";"+String(Vent)+";"+String(Gust)+";"+String(Tp)+";24");
+	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3570&nvalue=0&svalue=" + String(Dir)+";"+DirT[DirS]+";"+String(Vent)+";"+String(Gust)+";"+String(Tp)+";"+String(WindChild));
     http.GET();
     http.end();
 
