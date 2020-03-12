@@ -80,14 +80,6 @@ SQM_TSL2591 sqm = SQM_TSL2591(2591);
 // Serveur Web
 ESP8266WebServer server ( 80 );
 
-// Client Web
-HTTPClient http;
-
-// Pluviomètre
-pinMode(PINrain, INPUT);
-//attachInterrupt(pinrain, RainCount, RISING);
-
-
 //Clear sky corrected temperature (temp below means 0% clouds)
 #define CLOUD_TEMP_CLEAR  -8
 //Totally cover sky corrected temperature (temp above means 100% clouds)
@@ -118,8 +110,11 @@ unsigned char sa,sb,sd,se;
 unsigned int sc,sf, pin;
 String tx20RawDataS = "";
 unsigned int Wind, Gust, Dir, DirS;
-unsigned float WindChild, WindKMS;
-const char *DirT[]={'N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'};
+float WindChild, WindKMS;
+const String DirT[16]={'N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'};
+
+// MOD1016
+bool detected=fale;
 
 // Divers
 int Delai5mn=0;		// Timer 5mn
@@ -220,13 +215,16 @@ void setup() {
   pinMode(IRQ_ORAGE, INPUT);
   attachInterrupt(digitalPinToInterrupt(IRQ_ORAGE), orage, RISING);
   mod1016.getIRQ();                                                                                                                         
-  send(msqDist.set(0));
   
   // Pluie (capteur)
     pinMode(PinPluie,INPUT);
 	
+	// Pluviomètre
+	pinMode(PINrain, INPUT);
+	//attachInterrupt(pinrain, RainCount, RISING);
+	
   // SQM
-  sqm.begin():
+  sqm.begin();
   sqm.config.gain = TSL2591_GAIN_LOW;
   sqm.config.time = TSL2591_INTEGRATIONTIME_200MS;
   sqm.configSensor();
@@ -258,7 +256,7 @@ void loop() {
 	  // TODO Calcul du rain rate
 	  unsigned long currentTime = millis();
 	RainRate=360000L*Plevel*(CountRain-PrevCount)/(unsigned long)(currentTime-PrevTime);	//mm*100
-	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" String(RainRate)+";"+ String(CountRain/1000.0));
+	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" + String(RainRate)+";"+ String(CountRain/1000.0));
 	http.GET();
 	http.end();
 	updateRain=false;
@@ -291,4 +289,81 @@ void loop() {
 }                                                                                                                                           
 
 
+void orage() {
+  detected = true;
+}
 
+void isTX20Rising() {
+  if (!TX20IncomingData) {
+    TX20IncomingData = true;
+  }  
+}
+
+void translateIRQ(uns8 irq) {
+  switch (irq) {
+    case 1:
+      //Serial.println("NOISE DETECTED");
+      break;
+    case 4:
+      //Serial.println("DISTURBER DETECTED");
+      break;
+    case 8:
+      //Serial.println("LIGHTNING DETECTED");
+      sendOrage();                                                                                                                          
+      break;
+  }                                                                                                                                         
+}
+
+boolean readTX20() {
+    int bitcount=0;
+    
+    sa=sb=sd=se=0;
+    sc=0;sf=0;
+    tx20RawDataS = "";
+
+    for (bitcount=41; bitcount>0; bitcount--) {
+      pin = (digitalRead(DATAPIN));
+      if (!pin) {
+        tx20RawDataS += "1";      
+      } else {
+        tx20RawDataS += "0";      
+      }
+      if ((bitcount==41-4) || (bitcount==41-8) || (bitcount==41-20)  || (bitcount==41-24)  || (bitcount==41-28)) {
+        tx20RawDataS += " ";
+      }      
+      if (bitcount > 41-5){
+        // start, inverted
+        sa = (sa<<1)|(pin^1);
+      } else
+      if (bitcount > 41-5-4){
+        // wind dir, inverted
+        sb = sb>>1 | ((pin^1)<<3);
+      } else
+      if (bitcount > 41-5-4-12){
+        // windspeed, inverted
+        sc = sc>>1 | ((pin^1)<<11);
+      } else
+      if (bitcount > 41-5-4-12-4){
+        // checksum, inverted
+        sd = sd>>1 | ((pin^1)<<3);
+      } else 
+      if (bitcount > 41-5-4-12-4-4){
+        // wind dir
+        se = se>>1 | (pin<<3);
+      } else {
+        // windspeed
+        sf = sf>>1 | (pin<<11);
+      } 
+          
+      delayMicroseconds(1220);    
+    }
+    chk= ( sb + (sc&0xf) + ((sc>>4)&0xf) + ((sc>>8)&0xf) );chk&=0xf;
+    delayMicroseconds(2000);  // just in case
+    TX20IncomingData = false;  
+
+    if (sa==4 && sb==se && sc==sf && sd==chk){      
+      return true;
+    } else {
+      return false;      
+    }
+}                                                

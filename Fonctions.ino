@@ -130,7 +130,7 @@ void envoiHTTP() {
     http.GET();
     http.end();
 	// Anémomètre
-	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3570&nvalue=0&svalue=" + String(Dir)+";"+DirT[DirS]+";"+String(Vent)+";"+String(Gust)+";"+String(Tp)+";"+String(WindChild));
+	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3570&nvalue=0&svalue=" + String(Dir)+";"+DirT[DirS]+";"+String(Wind)+";"+String(Gust)+";"+String(Tp)+";"+String(WindChild));
     http.GET();
     http.end();
 
@@ -171,7 +171,7 @@ double cloudIndex() {
 }
 
 void watchInfo() {
-  String Page = "Tciel=" + String(skyT) + "\nCouvN=" + String(Clouds) + "\nText=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\n"Pluie"+String(Rain)+"\nlum=" + String(luminosite) + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
+  String Page = "Tciel=" + String(skyT) + "\nCouvN=" + String(Clouds) + "\nText=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\nPluie"+String(Rain)+"\nlum=" + String(luminosite) + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
   server.send ( 200, "text/plain", Page);
 }
 
@@ -181,24 +181,8 @@ void rainCount() {
 	updateRain=true;
 }
 
-void orage() {
-  detected = true;
-}
                                                                                                                                             
-void translateIRQ(uns8 irq) {
-  switch (irq) {
-    case 1:
-      //Serial.println("NOISE DETECTED");
-      break;
-    case 4:
-      //Serial.println("DISTURBER DETECTED");
-      break;
-    case 8:
-      //Serial.println("LIGHTNING DETECTED");
-      sendOrage();                                                                                                                          
-      break;
-  }                                                                                                                                         
-}
+
 
 void sendOrage() {
   int distance = mod1016.calculateDistance();
@@ -224,62 +208,4 @@ void sendOrage() {
   }                                                                                                                                         
 }                              
 
-void isTX20Rising() {
-  if (!TX20IncomingData) {
-    TX20IncomingData = true;
-  }  
-}
-
-boolean readTX20() {
-    int bitcount=0;
-    
-    sa=sb=sd=se=0;
-    sc=0;sf=0;
-    tx20RawDataS = "";
-
-    for (bitcount=41; bitcount>0; bitcount--) {
-      pin = (digitalRead(DATAPIN));
-      if (!pin) {
-        tx20RawDataS += "1";      
-      } else {
-        tx20RawDataS += "0";      
-      }
-      if ((bitcount==41-4) || (bitcount==41-8) || (bitcount==41-20)  || (bitcount==41-24)  || (bitcount==41-28)) {
-        tx20RawDataS += " ";
-      }      
-      if (bitcount > 41-5){
-        // start, inverted
-        sa = (sa<<1)|(pin^1);
-      } else
-      if (bitcount > 41-5-4){
-        // wind dir, inverted
-        sb = sb>>1 | ((pin^1)<<3);
-      } else
-      if (bitcount > 41-5-4-12){
-        // windspeed, inverted
-        sc = sc>>1 | ((pin^1)<<11);
-      } else
-      if (bitcount > 41-5-4-12-4){
-        // checksum, inverted
-        sd = sd>>1 | ((pin^1)<<3);
-      } else 
-      if (bitcount > 41-5-4-12-4-4){
-        // wind dir
-        se = se>>1 | (pin<<3);
-      } else {
-        // windspeed
-        sf = sf>>1 | (pin<<11);
-      } 
-          
-      delayMicroseconds(1220);    
-    }
-    chk= ( sb + (sc&0xf) + ((sc>>4)&0xf) + ((sc>>8)&0xf) );chk&=0xf;
-    delayMicroseconds(2000);  // just in case
-    TX20IncomingData = false;  
-
-    if (sa==4 && sb==se && sc==sf && sd==chk){      
-      return true;
-    } else {
-      return false;      
-    }
-}                                                                                                         
+                                                         
