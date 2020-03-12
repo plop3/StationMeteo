@@ -1,3 +1,13 @@
+/*
+	Station météo ESP8266
+	Serge CLAUS
+	GPL V3
+	Version 3.0
+	12/03/2020
+
+*/
+
+//----------------------------------------
 #include "StationMeteo.h"
 
 #include <SimpleTimer.h>
@@ -52,9 +62,20 @@ Adafruit_SI1145 uv = Adafruit_SI1145();
 // Mod1016
 #include <AS3935.h>
 
+
 // 1wire
 #include <DallasTemperature.h>
 #include <OneWire.h>
+OneWire oneWire(ONE_WIRE_BUS);                                                                                                              
+DallasTemperature sensors(&oneWire);                                                                                                        
+
+
+// Sol
+#define PinHumSol A0    // PIN capteur d'humidité
+
+// SQM
+#include "SQM_TSL2591.h"	// https://github.com/gshau/SQM_TSL2591
+SQM_TSL2591 sqm = SQM_TSL2591(2591);
 
 // Serveur Web
 ESP8266WebServer server ( 80 );
@@ -64,7 +85,7 @@ HTTPClient http;
 
 // Pluviomètre
 pinMode(PINrain, INPUT);
-attachInterrupt(pinrain, RainCount, RISING);
+//attachInterrupt(pinrain, RainCount, RISING);
 
 
 //Clear sky corrected temperature (temp below means 0% clouds)
@@ -74,17 +95,38 @@ attachInterrupt(pinrain, RainCount, RISING);
 //Activation treshold for cloudFlag (%)
 #define CLOUD_FLAG_PERCENT  30
 
-float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT, Wind, Rain;
+//----------------------------------------
+
+// Valeurs météo
+float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT, Rain;
+float tsol10, tsol100, humsol;
 int cloudy, dewing, frezzing;
+ 
+
 // Pluie
 unsigned int CountRain=0;
-unsigned int PrevCountRain=0;
-int CountBak=0;
-bool updateRain=true;
-unsigned long PrevTime;
+int CountBak=0;		// Sauvegarde des données en EEPROM / 24H
+volatile bool updateRain=true;
+unsigned long PrevTime=0;
+unsigned long PrevCount=CountRain;
+int RainRate=0;
+
+// TX20 anémomètre
+volatile boolean TX20IncomingData = false;
+unsigned char chk;
+unsigned char sa,sb,sd,se;
+unsigned int sc,sf, pin;
+String tx20RawDataS = "";
+unsigned int Wind, Gust, Dir, DirS;
+const char *DirT[]={'N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'};
+
+// Divers
+int Delai5mn=0;		// Timer 5mn
 
 float UVindex, ir;
 int luminosite;
+
+//----------------------------------------
 
 void setup() {
   // put your setup code here, to run once:
@@ -149,7 +191,7 @@ void setup() {
   else {
     // Sinon, récupération des données
     EEPROM.get(4,CountRain);
-	PrevCountRain=CountRain;
+	PrevCount=CountRain;
   }
   // MLX
   mlx.begin();
@@ -163,10 +205,43 @@ void setup() {
   //SI1145
   uv.begin();
 
+// MOD61016
+  Wire.begin();
+  mod1016.init(IRQ_ORAGE);                                                                                                                  
+  delay(2);
+  autoTuneCaps(IRQ_ORAGE);                                                                                                                  
+  delay(2);
+  //mod1016.setTuneCaps(6);
+  //delay(2);
+  mod1016.setOutdoors();                                                                                                                    
+  delay(2);
+  mod1016.setNoiseFloor(4);     // Valeur par defaut 5
+  pinMode(IRQ_ORAGE, INPUT);
+  attachInterrupt(digitalPinToInterrupt(IRQ_ORAGE), orage, RISING);
+  mod1016.getIRQ();                                                                                                                         
+  send(msqDist.set(0));
+  
+  // Pluie (capteur)
+    pinMode(PinPluie,INPUT);
+	
+  // SQM
+  sqm.begin():
+  sqm.config.gain = TSL2591_GAIN_LOW;
+  sqm.config.time = TSL2591_INTEGRATIONTIME_200MS;
+  sqm.configSensor();
+  //sqm.showConfig();
+  sqm.setCalibrationOffset(0.0);
+  
+  // TX20 anémomètre
+  pinMode(DATAPIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(DATAPIN), isTX20Rising, RISING);
+	
   // Serveur Web
   server.begin();
   server.on ( "/watch", watchInfo );
 }
+
+//----------------------------------------
 
 void loop() {
   // OTA
@@ -175,51 +250,37 @@ void loop() {
   server.handleClient();
   // Maj
   timer.run();
-  //delay(500);
+  // Pluie
+  Rain=digitalRead(PinPluie);
   if (updateRain) {
 	  // Envoi des infos à Domoticz
 	  // TODO Calcul du rain rate
-	int RainRate=100;	//mm*100
-	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" String(RainRate)+";"+ String(CountRain/100.0));
-    http.GET();
-    http.end();
-	  updateRain=false;
+	  unsigned long currentTime = millis();
+	RainRate=360000L*Plevel*(CountRain-PrevCount)/(unsigned long)(currentTime-PrevTime);	//mm*100
+	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" String(RainRate)+";"+ String(CountRain/1000.0));
+	http.GET();
+	http.end();
+	updateRain=false;
+	PrevTime=currentTime;
+	PrevCount=CountRain;
   }
-}
+    // MOD1016
+  if (detected) {
+    translateIRQ(mod1016.getIRQ());                                                                                                         
+    detected = false;
+  }        
 
-// dewPoint function NOAA
-// reference: http://wahiduddin.net/calc/density_algorithms.htm
-double dewPoint(double celsius, double humidity)
-{
-  double A0 = 373.15 / (273.15 + celsius);
-  double SUM = -7.90298 * (A0 - 1);
-  SUM += 5.02808 * log10(A0);
-  SUM += -1.3816e-7 * (pow(10, (11.344 * (1 - 1 / A0))) - 1);
-  SUM += 8.1328e-3 * (pow(10, (-3.49149 * (A0 - 1))) - 1);
-  SUM += log10(1013.246);
-  double VP = pow(10, SUM - 3) * humidity;
-  double T = log(VP / 0.61078); // temp var
-  return (241.88 * T) / (17.558 - T);
-}
+  // TX20 anémomètre
+  if (TX20IncomingData) {
+    if (readTX20()) {
+		// Data OK
+		Wind=sa;
+		Gust=sa;
+		Dir=sb*22.5;
+		DirS=sb;
+	}
+  }	  
+}                                                                                                                                           
 
-double skyTemp() {
-  //Constant defined above
-  double Td = (K1 / 100.) * (T - K2 / 10) + (K3 / 100.) * pow((exp (K4 / 1000.* T)) , (K5 / 100.));
-  double Tsky = IR - Td;
-  return Tsky;
-}
 
-double cloudIndex() {
-  double Tcloudy = CLOUD_TEMP_OVERCAST, Tclear = CLOUD_TEMP_CLEAR;
-  double Tsky = skyTemp();
-  double Index;
-  if (Tsky < Tclear) Tsky = Tclear;
-  if (Tsky > Tcloudy) Tsky = Tcloudy;
-  Index = (Tsky - Tclear) * 100 / (Tcloudy - Tclear);
-  return Index;
-}
 
-void watchInfo() {
-  String Page = "Tciel=" + String(skyT) + "\nCouvN=" + String(Clouds) + "\nText=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\nlum=" + String(luminosite) + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
-  server.send ( 200, "text/plain", Page);
-}
