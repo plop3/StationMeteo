@@ -9,12 +9,14 @@ void infoMeteo() {
   // Lecture des capteurs
   mesureCapteurs();
 
+#ifdef CPLUV
   CountBak++;
   // Sauvegarde des données journalière
   if (CountBak > 1440) { //1440 minutes=24H
     CountBak = 0;
     EEPROM.put(4, CountRain);
   }
+#endif
 
   /*
     // Envoi des données:
@@ -110,7 +112,7 @@ void envoiHTTP() {
   if (http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3556&nvalue=0&svalue=" + String(Tp) + ";" + String(HR) + ";0;" + String(P / 100) + ";" + String(forecast))) {
     http.GET();
     http.end();
-#ifdef CTCIEL
+	#ifdef CTCIEL
     // T° du ciel, couverture nuageuse
     http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3557&nvalue=0&svalue=" + String(skyT));
     http.GET();
@@ -157,7 +159,7 @@ void envoiHTTP() {
     http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3570&nvalue=0&svalue=" + String(Dir) + ";" + DirT[DirS] + ";" + String(Wind) + ";" + String(Gust) + ";" + String(Tp) + ";" + String(WindChild));
     http.GET();
     http.end();
-#endif
+	#endif
   }
 }
 //-----------------------------------------------
@@ -210,7 +212,6 @@ void watchInfo() {
   #ifdef CUV
   Page=Page+"\nUV=" + String(UVindex)+ "\nIR=" + String(ir);
   #endif
-  //String Page = "Tciel=" + String(skyT) + "\nCouvN=" + String(Clouds) + "\nText=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\nPluie" + String(Rain) + "\nlum=" + String(luminosite) + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
   server.send ( 200, "text/plain", Page);
 }
 

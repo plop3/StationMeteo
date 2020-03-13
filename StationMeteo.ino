@@ -106,7 +106,7 @@ ESP8266WebServer server ( 80 );
 
 // Valeurs météo
 // BME-280
-float P, HR, T, Tp Dew;
+float P, HR, T, Tp, Dew, dewing;
 
 //float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT, Rain;
 #ifdef CTSOL
@@ -117,7 +117,7 @@ float humsol;
 #endif
 #ifdef CTCIEL
 float skyT, Clouds, IR,Tir;
-int cloudy, dewing, frezzing;
+int cloudy; //, dewing, frezzing;
 #endif
 #ifdef CPLUIE
 float Rain;
@@ -214,7 +214,7 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-
+#ifdef CPLUV
   // Lecture des données de l'eeprom
   // L'adresse 0 doit correspondre à 24046 Sinon, initialisation des valeurs
   int Magic;
@@ -230,7 +230,7 @@ void setup() {
     EEPROM.get(4, CountRain);
     PrevCount = CountRain;
   }
-  
+  #endif
 
 #ifdef CTCIEL
 // MLX
