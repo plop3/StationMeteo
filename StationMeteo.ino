@@ -71,7 +71,7 @@ Adafruit_SI1145 uv = Adafruit_SI1145();
 #include <AS3935.h>
 #endif
 
-#ifdef TSOL
+#ifdef CTSOL
 // 1wire
 #include <DallasTemperature.h>
 #include <OneWire.h>
@@ -239,7 +239,7 @@ void setup() {
   // BME280
   bme.begin(0x76);
   // Timers
-  timer.setInterval(60000UL, infoMeteo);	  // Mise à jour des données barométriques et envoi des infos à Domoticz
+  timer.setInterval(60000L, infoMeteo);	  // Mise à jour des données barométriques et envoi des infos à Domoticz
   #ifdef CLUM
   //BH1750
   lightSensor.begin();
