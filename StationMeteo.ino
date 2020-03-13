@@ -26,6 +26,7 @@ SimpleTimer timer;
 // Client Web
 #include <ESP8266HTTPClient.h>
 HTTPClient http;
+WiFiClient client;
 
 // EEprom
 #include <EEPROM.h>
@@ -66,16 +67,19 @@ Adafruit_SI1145 uv = Adafruit_SI1145();
 // 1wire
 #include <DallasTemperature.h>
 #include <OneWire.h>
-OneWire oneWire(ONE_WIRE_BUS);                                                                                                              
-DallasTemperature sensors(&oneWire);                                                                                                        
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 
 
 // Sol
 #define PinHumSol A0    // PIN capteur d'humidité
 
+
 // SQM
+//#include "Adafruit_TSL2591.h"
 #include "SQM_TSL2591.h"	// https://github.com/gshau/SQM_TSL2591
 SQM_TSL2591 sqm = SQM_TSL2591(2591);
+
 
 // Serveur Web
 ESP8266WebServer server ( 80 );
@@ -93,31 +97,31 @@ ESP8266WebServer server ( 80 );
 float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT, Rain;
 float tsol10, tsol100, humsol;
 int cloudy, dewing, frezzing;
- 
+
 
 // Pluie
-unsigned int CountRain=0;
-int CountBak=0;		// Sauvegarde des données en EEPROM / 24H
-volatile bool updateRain=true;
-unsigned long PrevTime=0;
-unsigned long PrevCount=CountRain;
-int RainRate=0;
+unsigned int CountRain = 0;
+int CountBak = 0;		// Sauvegarde des données en EEPROM / 24H
+volatile bool updateRain = true;
+unsigned long PrevTime = 0;
+unsigned long PrevCount = CountRain;
+int RainRate = 0;
 
 // TX20 anémomètre
 volatile boolean TX20IncomingData = false;
 unsigned char chk;
-unsigned char sa,sb,sd,se;
-unsigned int sc,sf, pin;
+unsigned char sa, sb, sd, se;
+unsigned int sc, sf, pin;
 String tx20RawDataS = "";
 unsigned int Wind, Gust, Dir, DirS;
 float WindChild, WindKMS;
-const String DirT[16]={'N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'};
+String DirT[] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
 
 // MOD1016
-bool detected=fale;
+bool detected = false;
 
 // Divers
-int Delai5mn=0;		// Timer 5mn
+int Delai5mn = 0;		// Timer 5mn
 
 float UVindex, ir;
 int luminosite;
@@ -180,49 +184,52 @@ void setup() {
   EEPROM.get(0, Magic);
   if (Magic != 24046) {
     // Initialisation des valeurs
-    Magic=2406;
+    Magic = 2406;
     EEPROM.put(0, Magic);
-    EEPROM.put(4,CountRain);
+    EEPROM.put(4, CountRain);
   }
   else {
     // Sinon, récupération des données
-    EEPROM.get(4,CountRain);
-	PrevCount=CountRain;
+    EEPROM.get(4, CountRain);
+    PrevCount = CountRain;
   }
-  // MLX
+  
+
+// MLX
   mlx.begin();
   // BME280
   bme.begin(0x76);
   // Timers
-  timer.setInterval(60000L, infoMeteo);	  // Mise à jour des données barométriques et envoi des infos à Domoticz
+  timer.setInterval(60000UL, infoMeteo);	  // Mise à jour des données barométriques et envoi des infos à Domoticz
   //BH1750
   lightSensor.begin();
 
   //SI1145
   uv.begin();
 
-// MOD61016
+  // MOD61016
   Wire.begin();
-  mod1016.init(IRQ_ORAGE);                                                                                                                  
+  mod1016.init(IRQ_ORAGE);
   delay(2);
-  autoTuneCaps(IRQ_ORAGE);                                                                                                                  
+  autoTuneCaps(IRQ_ORAGE);
   delay(2);
   //mod1016.setTuneCaps(6);
   //delay(2);
-  mod1016.setOutdoors();                                                                                                                    
+  mod1016.setOutdoors();
   delay(2);
   mod1016.setNoiseFloor(4);     // Valeur par defaut 5
   pinMode(IRQ_ORAGE, INPUT);
   attachInterrupt(digitalPinToInterrupt(IRQ_ORAGE), orage, RISING);
-  mod1016.getIRQ();                                                                                                                         
-  
+  mod1016.getIRQ();
+
   // Pluie (capteur)
-    pinMode(PinPluie,INPUT);
-	
-	// Pluviomètre
-	pinMode(PINrain, INPUT);
-	//attachInterrupt(pinrain, RainCount, RISING);
-	
+  pinMode(PinPluie, INPUT);
+
+  // Pluviomètre
+  pinMode(PINrain, INPUT);
+  //attachInterrupt(pinrain, RainCount, RISING);
+
+
   // SQM
   sqm.begin();
   sqm.config.gain = TSL2591_GAIN_LOW;
@@ -230,11 +237,11 @@ void setup() {
   sqm.configSensor();
   //sqm.showConfig();
   sqm.setCalibrationOffset(0.0);
-  
+
   // TX20 anémomètre
   pinMode(DATAPIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(DATAPIN), isTX20Rising, RISING);
-	
+
   // Serveur Web
   server.begin();
   server.on ( "/watch", watchInfo );
@@ -250,43 +257,43 @@ void loop() {
   // Maj
   timer.run();
   // Pluie
-  Rain=digitalRead(PinPluie);
+  Rain = digitalRead(PinPluie);
   if (updateRain) {
-	  // Envoi des infos à Domoticz
-	  // TODO Calcul du rain rate
-	  unsigned long currentTime = millis();
-	RainRate=360000L*Plevel*(CountRain-PrevCount)/(unsigned long)(currentTime-PrevTime);	//mm*100
-	http.begin("http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" + String(RainRate)+";"+ String(CountRain/1000.0));
-	http.GET();
-	http.end();
-	updateRain=false;
-	PrevTime=currentTime;
-	PrevCount=CountRain;
+    // Envoi des infos à Domoticz
+    // TODO Calcul du rain rate
+    unsigned long currentTime = millis();
+    RainRate = 360000L * Plevel * (CountRain - PrevCount) / (unsigned long)(currentTime - PrevTime);	//mm*100
+    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" + String(RainRate) + ";" + String(CountRain / 1000.0));
+    http.GET();
+    http.end();
+    updateRain = false;
+    PrevTime = currentTime;
+    PrevCount = CountRain;
   }
-    // MOD1016
+  // MOD1016
   if (detected) {
-    translateIRQ(mod1016.getIRQ());                                                                                                         
+    translateIRQ(mod1016.getIRQ());
     detected = false;
-  }        
+  }
 
   // TX20 anémomètre
   if (TX20IncomingData) {
     if (readTX20()) {
-		// Data OK
-		Wind=sa;
-		Gust=sa;
-		Dir=sb*22.5;
-		DirS=sb;
-		float WindKMH=Wind*0.36;
-		if (WindKMH<4.8) {
-			WindChild=Tp+0.2*(0.1345*Tp-1.59)*WindKMH;
-		}
-		else {
-			WindChild=13.12+0.6215*Tp+(0.3965*Tp-11.37)*WindKMH;
-		}
-	}
-  }	  
-}                                                                                                                                           
+      // Data OK
+      Wind = sa;
+      Gust = sa;
+      Dir = sb * 22.5;
+      DirS = sb;
+      float WindKMH = Wind * 0.36;
+      if (WindKMH < 4.8) {
+        WindChild = Tp + 0.2 * (0.1345 * Tp - 1.59) * WindKMH;
+      }
+      else {
+        WindChild = 13.12 + 0.6215 * Tp + (0.3965 * Tp - 11.37) * WindKMH;
+      }
+    }
+  }
+}
 
 
 void orage() {
@@ -296,7 +303,7 @@ void orage() {
 void isTX20Rising() {
   if (!TX20IncomingData) {
     TX20IncomingData = true;
-  }  
+  }
 }
 
 void translateIRQ(uns8 irq) {
@@ -309,61 +316,57 @@ void translateIRQ(uns8 irq) {
       break;
     case 8:
       //Serial.println("LIGHTNING DETECTED");
-      sendOrage();                                                                                                                          
+      sendOrage();
       break;
-  }                                                                                                                                         
+  }
 }
 
 boolean readTX20() {
-    int bitcount=0;
-    
-    sa=sb=sd=se=0;
-    sc=0;sf=0;
-    tx20RawDataS = "";
+  int bitcount = 0;
 
-    for (bitcount=41; bitcount>0; bitcount--) {
-      pin = (digitalRead(DATAPIN));
-      if (!pin) {
-        tx20RawDataS += "1";      
-      } else {
-        tx20RawDataS += "0";      
-      }
-      if ((bitcount==41-4) || (bitcount==41-8) || (bitcount==41-20)  || (bitcount==41-24)  || (bitcount==41-28)) {
-        tx20RawDataS += " ";
-      }      
-      if (bitcount > 41-5){
-        // start, inverted
-        sa = (sa<<1)|(pin^1);
-      } else
-      if (bitcount > 41-5-4){
-        // wind dir, inverted
-        sb = sb>>1 | ((pin^1)<<3);
-      } else
-      if (bitcount > 41-5-4-12){
-        // windspeed, inverted
-        sc = sc>>1 | ((pin^1)<<11);
-      } else
-      if (bitcount > 41-5-4-12-4){
-        // checksum, inverted
-        sd = sd>>1 | ((pin^1)<<3);
-      } else 
-      if (bitcount > 41-5-4-12-4-4){
-        // wind dir
-        se = se>>1 | (pin<<3);
-      } else {
-        // windspeed
-        sf = sf>>1 | (pin<<11);
-      } 
-          
-      delayMicroseconds(1220);    
-    }
-    chk= ( sb + (sc&0xf) + ((sc>>4)&0xf) + ((sc>>8)&0xf) );chk&=0xf;
-    delayMicroseconds(2000);  // just in case
-    TX20IncomingData = false;  
+  sa = sb = sd = se = 0;
+  sc = 0; sf = 0;
+  tx20RawDataS = "";
 
-    if (sa==4 && sb==se && sc==sf && sd==chk){      
-      return true;
+  for (bitcount = 41; bitcount > 0; bitcount--) {
+    pin = (digitalRead(DATAPIN));
+    if (!pin) {
+      tx20RawDataS += "1";
     } else {
-      return false;      
+      tx20RawDataS += "0";
     }
-}                                                
+    if ((bitcount == 41 - 4) || (bitcount == 41 - 8) || (bitcount == 41 - 20)  || (bitcount == 41 - 24)  || (bitcount == 41 - 28)) {
+      tx20RawDataS += " ";
+    }
+    if (bitcount > 41 - 5) {
+      // start, inverted
+      sa = (sa << 1) | (pin ^ 1);
+    } else if (bitcount > 41 - 5 - 4) {
+      // wind dir, inverted
+      sb = sb >> 1 | ((pin ^ 1) << 3);
+    } else if (bitcount > 41 - 5 - 4 - 12) {
+      // windspeed, inverted
+      sc = sc >> 1 | ((pin ^ 1) << 11);
+    } else if (bitcount > 41 - 5 - 4 - 12 - 4) {
+      // checksum, inverted
+      sd = sd >> 1 | ((pin ^ 1) << 3);
+    } else if (bitcount > 41 - 5 - 4 - 12 - 4 - 4) {
+      // wind dir
+      se = se >> 1 | (pin << 3);
+    } else {
+      // windspeed
+      sf = sf >> 1 | (pin << 11);
+    }
+
+    delayMicroseconds(1220);
+  }
+  chk = ( sb + (sc & 0xf) + ((sc >> 4) & 0xf) + ((sc >> 8) & 0xf) ); chk &= 0xf;
+  delayMicroseconds(2000);  // just in case
+  TX20IncomingData = false;
+
+  if (sa == 4 && sb == se && sc == sf && sd == chk) {
+    return true;
+  } else {
+    return false;
+  }
+}
