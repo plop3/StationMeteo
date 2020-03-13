@@ -39,6 +39,7 @@ WiFiClient client;
 const char* ssid = STASSID;
 const char* password = STAPSK;
 
+#ifdef CTCIEL
 // MLX
 #define  K1 33.
 #define  K2 0.
@@ -47,39 +48,49 @@ const char* password = STAPSK;
 #define  K5 100.
 #include "Adafruit_MLX90614.h"
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+#endif
 
 // BME280
 #include "Adafruit_BME280.h"
 Adafruit_BME280 bme;
 
+#ifdef CLUM
 // BH1750 Luminosité
 #include <BH1750.h>
 BH1750 lightSensor;
+#endif
 
+#ifdef CUV
 // SI1145 UV
 #include "Adafruit_SI1145.h"
 Adafruit_SI1145 uv = Adafruit_SI1145();
+#endif
 
+#ifdef CORAGE
 // Mod1016
 #include <AS3935.h>
+#endif
 
-
+#ifdef TSOL
 // 1wire
 #include <DallasTemperature.h>
 #include <OneWire.h>
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
+#endif
 
-
-// Sol
+#ifdef CHUMSOL
+// Humidité Sol
 #define PinHumSol A0    // PIN capteur d'humidité
+#endif
 
 
+#ifdef CSQM
 // SQM
 //#include "Adafruit_TSL2591.h"
 #include "SQM_TSL2591.h"	// https://github.com/gshau/SQM_TSL2591
 SQM_TSL2591 sqm = SQM_TSL2591(2591);
-
+#endif
 
 // Serveur Web
 ESP8266WebServer server ( 80 );
@@ -94,11 +105,35 @@ ESP8266WebServer server ( 80 );
 //----------------------------------------
 
 // Valeurs météo
-float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT, Rain;
-float tsol10, tsol100, humsol;
+// BME-280
+float P, HR, T, Tp Dew;
+
+//float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT, Rain;
+#ifdef CTSOL
+float tsol10, tsol100;
+#endif
+#ifdef CHUMSOL
+float humsol;
+#endif
+#ifdef CTCIEL
+float skyT, Clouds, IR,Tir;
 int cloudy, dewing, frezzing;
+#endif
+#ifdef CPLUIE
+float Rain;
+#endif
+#ifdef CSQM
+float mag_arcsec2;
+#endif
+#ifdef CLUM
+float lux;
+int luminosite;
+#endif
+#ifdef CUV
+float UVindex, ir;
+#endif
 
-
+#ifdef CPLUV
 // Pluie
 unsigned int CountRain = 0;
 int CountBak = 0;		// Sauvegarde des données en EEPROM / 24H
@@ -106,7 +141,9 @@ volatile bool updateRain = true;
 unsigned long PrevTime = 0;
 unsigned long PrevCount = CountRain;
 int RainRate = 0;
+#endif
 
+#ifdef CVENT
 // TX20 anémomètre
 volatile boolean TX20IncomingData = false;
 unsigned char chk;
@@ -116,15 +153,15 @@ String tx20RawDataS = "";
 unsigned int Wind, Gust, Dir, DirS;
 float WindChild, WindKMS;
 String DirT[] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+#endif
 
+#ifdef CORAGE
 // MOD1016
 bool detected = false;
+#endif
 
 // Divers
 int Delai5mn = 0;		// Timer 5mn
-
-float UVindex, ir;
-int luminosite;
 
 //----------------------------------------
 
@@ -195,19 +232,24 @@ void setup() {
   }
   
 
+#ifdef CTCIEL
 // MLX
   mlx.begin();
+ #endif
   // BME280
   bme.begin(0x76);
   // Timers
   timer.setInterval(60000UL, infoMeteo);	  // Mise à jour des données barométriques et envoi des infos à Domoticz
+  #ifdef CLUM
   //BH1750
   lightSensor.begin();
-
+#endif
+#ifdef CUV
   //SI1145
   uv.begin();
-
-  // MOD61016
+#endif
+#ifdef CORAGE
+  // MOD-1016
   Wire.begin();
   mod1016.init(IRQ_ORAGE);
   delay(2);
@@ -221,15 +263,17 @@ void setup() {
   pinMode(IRQ_ORAGE, INPUT);
   attachInterrupt(digitalPinToInterrupt(IRQ_ORAGE), orage, RISING);
   mod1016.getIRQ();
-
+#endif
+#ifdef CPLUIE
   // Pluie (capteur)
   pinMode(PinPluie, INPUT);
-
+#endif
+#ifdef CPLUV
   // Pluviomètre
   pinMode(PINrain, INPUT);
   //attachInterrupt(pinrain, RainCount, RISING);
-
-
+#endif
+#ifdef CSQM
   // SQM
   sqm.begin();
   sqm.config.gain = TSL2591_GAIN_LOW;
@@ -237,11 +281,12 @@ void setup() {
   sqm.configSensor();
   //sqm.showConfig();
   sqm.setCalibrationOffset(0.0);
-
+#endif
+#ifdef CVENT
   // TX20 anémomètre
   pinMode(DATAPIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(DATAPIN), isTX20Rising, RISING);
-
+#endif
   // Serveur Web
   server.begin();
   server.on ( "/watch", watchInfo );
@@ -256,8 +301,11 @@ void loop() {
   server.handleClient();
   // Maj
   timer.run();
+  #ifdef CPLUIE
   // Pluie
   Rain = digitalRead(PinPluie);
+  #endif
+  #ifdef CPLUV
   if (updateRain) {
     // Envoi des infos à Domoticz
     // TODO Calcul du rain rate
@@ -270,12 +318,16 @@ void loop() {
     PrevTime = currentTime;
     PrevCount = CountRain;
   }
+  #endif
+  
+  #ifdef CORAGE
   // MOD1016
   if (detected) {
     translateIRQ(mod1016.getIRQ());
     detected = false;
   }
-
+#endif
+#ifdef CVENT
   // TX20 anémomètre
   if (TX20IncomingData) {
     if (readTX20()) {
@@ -293,17 +345,12 @@ void loop() {
       }
     }
   }
+  #endif
 }
 
-
+#ifdef CORAGE
 void orage() {
   detected = true;
-}
-
-void isTX20Rising() {
-  if (!TX20IncomingData) {
-    TX20IncomingData = true;
-  }
 }
 
 void translateIRQ(uns8 irq) {
@@ -318,6 +365,14 @@ void translateIRQ(uns8 irq) {
       //Serial.println("LIGHTNING DETECTED");
       sendOrage();
       break;
+  }
+}
+#endif
+
+#ifdef CVENT
+void isTX20Rising() {
+  if (!TX20IncomingData) {
+    TX20IncomingData = true;
   }
 }
 
@@ -370,3 +425,4 @@ boolean readTX20() {
     return false;
   }
 }
+#endif
