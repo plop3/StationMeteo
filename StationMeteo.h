@@ -14,3 +14,16 @@
 #define PinPluie 		D6 // Capteur de pluie
 #define IRQ_ORAGE 		D5 // PIN IRQ MOD1016	
 #define DATAPIN			D7 // Anémomètre Lacrosse TX20
+
+#define CBARO	// BME-280
+#define CUV		// SI1145
+#define CLUM	// BH1750
+#define CTCIEL	// MLX90614
+#define	CSQM	// TSL2591
+#define CORAGE	// MOD-1016
+#define CPLUIE	// Capteur de pluie infrarouge
+#define CPLUV	// Pluviomètre WS2300 (0.517mm/imp)
+#define CVENT	//	TX-20 Anémomètre/girouette WS2300
+#define CTSOL	// 1-wire
+#define CHUMSOL	// Capteur capacitif analogique
+
