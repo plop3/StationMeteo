@@ -290,6 +290,8 @@ void setup() {
   // Serveur Web
   server.begin();
   server.on ( "/watch", watchInfo );
+  // Lecture des infos des capteurs initiale
+  infoMeteo();
 }
 
 //----------------------------------------
