@@ -33,7 +33,7 @@ WiFiClient client;
 
 #ifndef STASSID
 #define STASSID "astro"
-#define STAPSK  "B546546AF0"
+#define STAPSK  "pwd"
 #endif
 
 const char* ssid = STASSID;
@@ -176,7 +176,7 @@ void setup() {
   while ((WiFi.waitForConnectResult() != WL_CONNECTED) && (i > 0)) {
     Serial.println("Connection Failed...");
     delay(5000);
-    i--;
+    //i--; // La station doit être connectée pour fonctionner
   }
   ArduinoOTA.setHostname("stationmeteo");
   ArduinoOTA.onStart([]() {
