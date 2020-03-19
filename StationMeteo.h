@@ -20,10 +20,9 @@
 #define CLUM	// BH1750
 #define CTCIEL	// MLX90614
 //#define	CSQM	// TSL2591
-//#define CORAGE	// MOD-1016
+#define CORAGE	// MOD-1016
 //#define CPLUIE	// Capteur de pluie infrarouge
-//#define CPLUV	// Pluviomètre WS2300 (0.517mm/imp)
+#define CPLUV	// Pluviomètre WS2300 (0.517mm/imp)
 //#define CVENT	//	TX-20 Anémomètre/girouette WS2300
 //#define CTSOL	// 1-wire
 //#define CHUMSOL	// Capteur capacitif analogique
-

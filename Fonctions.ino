@@ -216,7 +216,7 @@ void watchInfo() {
 }
 
 #ifdef CPLUV
-void rainCount() {
+ICACHE_RAM_ATTR void rainCount() {
   // Incrémente le compteur de pluie
   CountRain += Plevel;
   updateRain = true;

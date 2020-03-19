@@ -271,7 +271,7 @@ void setup() {
 #ifdef CPLUV
   // Pluviomètre
   pinMode(PINrain, INPUT);
-  //attachInterrupt(pinrain, RainCount, RISING);
+  attachInterrupt(digitalPinToInterrupt(PINrain), rainCount, RISING);
 #endif
 #ifdef CSQM
   // SQM
@@ -351,7 +351,7 @@ void loop() {
 }
 
 #ifdef CORAGE
-void orage() {
+ICACHE_RAM_ATTR void orage() {
   detected = true;
 }
 
@@ -372,7 +372,7 @@ void translateIRQ(uns8 irq) {
 #endif
 
 #ifdef CVENT
-void isTX20Rising() {
+ICACHE_RAM_ATTR void isTX20Rising() {
   if (!TX20IncomingData) {
     TX20IncomingData = true;
   }
