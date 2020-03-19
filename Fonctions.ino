@@ -36,7 +36,7 @@ void infoMeteo() {
   Delai5mn++;
   if (Delai5mn > 5) {
     Delai5mn = 0;
-	#ifdef CPLUIE
+	#ifdef CLPUV
     updateRain = true;	// Envoi des données du pluviomètre
 	#endif
   }
