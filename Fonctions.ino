@@ -8,42 +8,36 @@ void infoMeteo() {
 
   // Lecture des capteurs
   mesureCapteurs();
+  envoiHTTP();
 
-#ifdef CPLUV
-  CountBak++;
-  // Sauvegarde des données journalière
-  if (CountBak > 1440) { //1440 minutes=24H
-    CountBak = 0;
-    EEPROM.put(4, CountRain);
+#ifdef CCLOT
+  if (nbImpact < 30) { // Moins de 30 impacts/min
+    if (!alerteClot) {
+      alerteClot = true;
+      sendAlerteClot(true);
+
+    }
   }
+  else if (alerteClot) {
+    alerteClot = false;
+    sendAlerteClot(false);
+  }
+  nbImpact = 0;
 #endif
 
-  /*
-    // Envoi des données:
-    Serial.println("Tciel=" + String(skyT));
-    Serial.println("CouvN=" + String(Clouds));
-    Serial.println("Text=" + String(Tp));
-    Serial.println("Hext=" + String(HR));
-    Serial.println("Pres=" + String(P / 100));
-    //  Serial.println("IR=" + String(ir));
-    Serial.println("Dew=" + String(Dew));
-    Serial.println("UV=" + String(UVindex));
-    Serial.println("Lux=" + String(luminosite));
-    //Serial.println("SQM=20.3");
-    //Serial.println("Vent=15");
-  */
-  envoiHTTP();
   Delai5mn++;
   if (Delai5mn > 5) {
     Delai5mn = 0;
-	#ifdef CLPUV
-    updateRain = true;	// Envoi des données du pluviomètre
-	#endif
+
+#ifdef CCLOT
+    sendAlerteClot(alerteClot);
+#endif
+
   }
 }
 
 void mesureCapteurs() {
-	#ifdef CTCIEL
+#ifdef CTCIEL
   // MLX
   Tir = mlx.readAmbientTempC();
   IR = mlx.readObjectTempC();
@@ -56,7 +50,7 @@ void mesureCapteurs() {
   }
 #endif
   // BME280
-  Tp = bme.readTemperature();
+  Tp = int(bme.readTemperature() * 10) / 10.0;
   P = bme.readPressure();
   float HRt = bme.readHumidity();
   if (HRt > 0) HR = HRt;
@@ -96,8 +90,8 @@ void mesureCapteurs() {
 
 #ifdef CSQM
   // SQM
-   sqm.takeReading();
-   mag_arcsec2=sqm.mpsas;
+  sqm.takeReading();
+  mag_arcsec2 = sqm.mpsas;
   /*
     sqm.full()
     sqm.ir()
@@ -105,61 +99,74 @@ void mesureCapteurs() {
     sqm.dmpsas()
   */
 #endif
+#ifdef RRAIN
+  rainRate = getRain();
+#endif
+
+#ifdef RVENT
+  Wind = getVent();
+  Gust = getRaf();
+#endif
 }
 
 void envoiHTTP() {
+  Serial.println("Envoi données");
   // Baromètre
-  if (http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3556&nvalue=0&svalue=" + String(Tp) + ";" + String(HR) + ";0;" + String(P / 100) + ";" + String(forecast))) {
+  if (http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3556&nvalue=0&svalue=" + String(Tp) + ";" + String(HR) + ";0;" + String(P / 100) + ";" + String(forecast))) {
     http.GET();
     http.end();
-	#ifdef CTCIEL
+#ifdef CTCIEL
     // T° du ciel, couverture nuageuse
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3557&nvalue=0&svalue=" + String(skyT));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3557&nvalue=0&svalue=" + String(skyT));
     http.GET();
     http.end();
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3558&nvalue=0&svalue=" + String(Clouds));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3558&nvalue=0&svalue=" + String(Clouds));
     http.GET();
     http.end();
-	#endif
-	#ifdef CUV
+#endif
+#ifdef CUV
     // Index UV
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3560&nvalue=0&svalue=" + String(UVindex) + ";0");
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3560&nvalue=0&svalue=" + String(UVindex) + ";0");
     http.GET();
     http.end();
-	#endif
-	#ifdef CLUM
+#endif
+#ifdef CLUM
     // Luminosité
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3559&nvalue=0&svalue=" + String(luminosite));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3559&nvalue=0&svalue=" + String(luminosite));
     http.GET();
     http.end();
-	#endif
-	#ifdef CTSOL
+#endif
+#ifdef CTSOL
     // T° sol
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3565&nvalue=0&svalue=" + String(tsol10));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3565&nvalue=0&svalue=" + String(tsol10));
     http.GET();
     http.end();
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3563&nvalue=0&svalue=" + String(tsol100));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3563&nvalue=0&svalue=" + String(tsol100));
     http.GET();
     http.end();
-	#endif
-	#ifdef CHUMSOL
+#endif
+#ifdef CHUMSOL
     // H% sol
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3566&nvalue=0&svalue=" + String(humsol));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3566&nvalue=0&svalue=" + String(humsol));
     http.GET();
     http.end();
-	#endif
-	#ifdef CSQM
+#endif
+#ifdef CSQM
     // SQM
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3571&nvalue=0&svalue=" + String(mag_arcsec2));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3571&nvalue=0&svalue=" + String(mag_arcsec2));
     http.GET();
     http.end();
-	#endif
-	#ifdef CVENT
-    // Anémomètre
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3570&nvalue=0&svalue=" + String(Dir) + ";" + DirT[DirS] + ";" + String(Wind) + ";" + String(Gust) + ";" + String(Tp) + ";" + String(WindChild));
-    http.GET();
-    http.end();
-	#endif
+#endif
+#if defined CPLUIE
+    if (Rain != LastRain) {
+      LastRain = Rain;
+      // Capteur de pluie
+      http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=switchlight&idx=3572&switchcmd=" + String(Rain ? "On" : "Off"));
+      //json.htm?type=command&param=switchlight&idx=99&switchcmd=On
+      http.GET();
+      http.end();
+    }
+#endif
   }
 }
 //-----------------------------------------------
@@ -199,34 +206,71 @@ double cloudIndex() {
 #endif
 
 void watchInfo() {
-  String Page= "Text=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew);
-  #ifdef CTCIEL
-  Page=Page+"\nTciel=" + String(skyT) + "\nCouvN=" + String(Clouds);
-  #endif
-  #ifdef CPLUIE
-  Page=Page+"\nPluie" + String(Rain);
-  #endif
-  #ifdef CLUM
-  Page=Page+"\nlum=" + String(luminosite);
-  #endif
-  #ifdef CUV
-  Page=Page+"\nUV=" + String(UVindex)+ "\nIR=" + String(ir);
-  #endif
+  Serial.println("Envoi Web");
+  String Page = "Text=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\nFore=" + String(forecast);
+#ifdef CTCIEL
+  Page = Page + "\nTciel=" + String(skyT) + "\nCouvN=" + String(Clouds);
+#endif
+#if defined CPLUIE || defined RRAIN
+  Page = Page + "\nPluie=" + String(Rain);
+#endif
+#ifdef CLUM
+  Page = Page + "\nlum=" + String(luminosite);
+#endif
+#ifdef CUV
+  Page = Page + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
+#endif
+#ifdef RVENT
+  Page = Page + "\nVent=" + Wind;
+  Page = Page + "\nRaf=" + Gust;
+#endif
   server.send ( 200, "text/plain", Page);
 }
 
-#ifdef CPLUV
-ICACHE_RAM_ATTR void rainCount() {
-  // Incrémente le compteur de pluie
-  CountRain += Plevel;
-  updateRain = true;
+void sendTemperature() {
+  server.send (200, "text/plain", String(Tp));
+}
+
+#ifdef RVENT
+String getVent() {
+  String Wind;
+  http.begin(client, "http://192.168.0.14/wind");
+  if (http.GET() == 200)  {
+    Wind = http.getString();
+  }
+  else Wind = "0";
+  http.end();
+  return Wind;
+}
+String getRaf() {
+  String Gust;
+  http.begin(client, "http://192.168.0.14/gust");
+  if (http.GET() == 200)  {
+    Gust = http.getString();
+  }
+  else Gust = "0";
+  http.end();
+  return Gust;
+}
+#endif
+
+#ifdef RRAIN
+int getRain() {
+  http.begin(client, "http://192.168.0.14/rain");
+  if (http.GET() == 200) {
+    int rainRate = http.getString().toInt();
+    Serial.print("Rain: ");
+    Serial.println(rainRate);
+  }
+  else rainRate = 0;
+  http.end();
+  return rainRate;
 }
 #endif
 
 #ifdef CORAGE
 void sendOrage() {
   int distance = mod1016.calculateDistance();
-  //int intensite = mod1016.getIntensity();
   /* if (distance == -1) {
      //Serial.println("Lightning out of range");
     else if (distance == 1)
@@ -240,12 +284,21 @@ void sendOrage() {
     //Serial.print(distance);
     //Serial.println("km away\n");
     //Serial.print("Intensité: ");Serial.println(intensite);
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3564&nvalue=0&svalue=" + String(distance));
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3564&nvalue=0&svalue=" + String(distance));
     http.GET();
     http.end();
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3568&nvalue=0&svalue=1");
+    http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3568&nvalue=0&svalue=1");
     http.GET();
     http.end();
   }
+}
+#endif
+
+#ifdef CCLOT
+void sendAlerteClot(bool etat) {
+  //json.htm?type=command&param=udevice&idx=IDX&nvalue=LEVEL&svalue=TEXT
+  http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3573&nvalue=" + String(etat ? 4 : 1) + "&svalue=" + String(etat ? "Cloture\%20coupée" : "Cloture\%20OK"));
+  http.GET();
+  http.end();
 }
 #endif

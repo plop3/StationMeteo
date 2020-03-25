@@ -6,6 +6,8 @@
 // Capteur UV
 #define RP_UV 1.3       // Multiplicateur index UV (du au cache dépoli)
 
+#define CLOTINTERV 1100 //1000
+
 // Pluviomètre
 #define Plevel 517	// mm de pluie/1000 par impulsion (Réel: 0.517mm/imp)
 // Pins
@@ -15,14 +17,16 @@
 #define IRQ_ORAGE 		D5 // PIN IRQ MOD1016	
 #define DATAPIN			D7 // Anémomètre Lacrosse TX20
 
-#define CBARO	// BME-280
-#define CUV		// SI1145
-#define CLUM	// BH1750
-#define CTCIEL	// MLX90614
-//#define	CSQM	// TSL2591
-#define CORAGE	// MOD-1016
-//#define CPLUIE	// Capteur de pluie infrarouge
-#define CPLUV	// Pluviomètre WS2300 (0.517mm/imp)
-//#define CVENT	//	TX-20 Anémomètre/girouette WS2300
-//#define CTSOL	// 1-wire
-//#define CHUMSOL	// Capteur capacitif analogique
+#define CBARO	    // BME-280
+#define CUV		    // SI1145
+#define CLUM	    // BH1750
+#define CTCIEL	  // MLX90614
+//#define	CSQM	   // TSL2591
+#define CCLOT     // Cloture électrique
+//#define CORAGE	 // MOD-1016
+//#define CPLUIE	 // Capteur de pluie infrarouge
+//#define CTSOL	   // 1-wire
+//#define CHUMSOL	 // Capteur capacitif analogique
+
+#define RVENT     // Station météo2 infos de vitesse du vent
+#define RRAIN     // Pluie On/Off

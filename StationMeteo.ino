@@ -28,9 +28,6 @@ SimpleTimer timer;
 HTTPClient http;
 WiFiClient client;
 
-// EEprom
-#include <EEPROM.h>
-
 #ifndef STASSID
 #define STASSID "astro"
 #define STAPSK  "pwd"
@@ -66,10 +63,11 @@ BH1750 lightSensor;
 Adafruit_SI1145 uv = Adafruit_SI1145();
 #endif
 
-#ifdef CORAGE
+#if defined CORAGE || defined CCLOT
 // Mod1016
 #include <AS3935.h>
 #endif
+
 
 #ifdef CTSOL
 // 1wire
@@ -116,11 +114,12 @@ float tsol10, tsol100;
 float humsol;
 #endif
 #ifdef CTCIEL
-float skyT, Clouds, IR,Tir;
+float skyT, Clouds, IR, Tir;
 int cloudy; //, dewing, frezzing;
 #endif
-#ifdef CPLUIE
-float Rain;
+#if defined CPLUIE || defined CPLUV || defined RRAIN
+bool Rain = false;
+bool LastRain = !Rain;
 #endif
 #ifdef CSQM
 float mag_arcsec2;
@@ -133,31 +132,23 @@ int luminosite;
 float UVindex, ir;
 #endif
 
-#ifdef CPLUV
-// Pluie
-unsigned int CountRain = 0;
-int CountBak = 0;		// Sauvegarde des données en EEPROM / 24H
-volatile bool updateRain = true;
-unsigned long PrevTime = 0;
-unsigned long PrevCount = CountRain;
-int RainRate = 0;
+#ifdef RRAIN
+int rainRate = 0;
 #endif
 
-#ifdef CVENT
-// TX20 anémomètre
-volatile boolean TX20IncomingData = false;
-unsigned char chk;
-unsigned char sa, sb, sd, se;
-unsigned int sc, sf, pin;
-String tx20RawDataS = "";
-unsigned int Wind, Gust, Dir, DirS;
-float WindChild, WindKMS;
-String DirT[] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+#ifdef RVENT
+String Wind, Gust;
 #endif
 
-#ifdef CORAGE
+#if defined CORAGE || defined CCLOT
 // MOD1016
 bool detected = false;
+#endif
+
+#if defined CCLOT
+unsigned long lastImp;
+int nbImpact = 50;
+bool alerteClot = false;
 #endif
 
 // Divers
@@ -169,9 +160,14 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
-  // OTA
+   // OTA
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
+  IPAddress ip(192, 168, 0, 19);
+  IPAddress subnet(255, 255, 255, 0);
+  IPAddress dns(192, 168, 0, 1);
+  IPAddress gateway(192, 168, 0, 1);
+  WiFi.config(ip, gateway, subnet, dns);
   byte i = 5;
   while ((WiFi.waitForConnectResult() != WL_CONNECTED) && (i > 0)) {
     Serial.println("Connection Failed...");
@@ -214,33 +210,16 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-#ifdef CPLUV
-  // Lecture des données de l'eeprom
-  // L'adresse 0 doit correspondre à 24046 Sinon, initialisation des valeurs
-  int Magic;
-  EEPROM.get(0, Magic);
-  if (Magic != 24046) {
-    // Initialisation des valeurs
-    Magic = 2406;
-    EEPROM.put(0, Magic);
-    EEPROM.put(4, CountRain);
-  }
-  else {
-    // Sinon, récupération des données
-    EEPROM.get(4, CountRain);
-    PrevCount = CountRain;
-  }
-  #endif
 
 #ifdef CTCIEL
-// MLX
+  // MLX
   mlx.begin();
- #endif
+#endif
   // BME280
   bme.begin(0x76);
   // Timers
   timer.setInterval(60000L, infoMeteo);	  // Mise à jour des données barométriques et envoi des infos à Domoticz
-  #ifdef CLUM
+#ifdef CLUM
   //BH1750
   lightSensor.begin();
 #endif
@@ -248,7 +227,7 @@ void setup() {
   //SI1145
   uv.begin();
 #endif
-#ifdef CORAGE
+#if defined CORAGE || defined CCLOT
   // MOD-1016
   Wire.begin();
   mod1016.init(IRQ_ORAGE);
@@ -259,20 +238,24 @@ void setup() {
   //delay(2);
   mod1016.setOutdoors();
   delay(2);
-  mod1016.setNoiseFloor(4);     // Valeur par defaut 5
+  mod1016.setNoiseFloor(5);     // Valeur par defaut 5
+  mod1016.writeRegister(0x02, 0x30, 0x03 << 4);
+  delay(200);
   pinMode(IRQ_ORAGE, INPUT);
   attachInterrupt(digitalPinToInterrupt(IRQ_ORAGE), orage, RISING);
   mod1016.getIRQ();
 #endif
+
+#ifdef CCLOT
+  lastImp = millis();
+#endif
+
+
 #ifdef CPLUIE
   // Pluie (capteur)
   pinMode(PinPluie, INPUT);
 #endif
-#ifdef CPLUV
-  // Pluviomètre
-  pinMode(PINrain, INPUT);
-  attachInterrupt(digitalPinToInterrupt(PINrain), rainCount, RISING);
-#endif
+
 #ifdef CSQM
   // SQM
   sqm.begin();
@@ -282,14 +265,11 @@ void setup() {
   //sqm.showConfig();
   sqm.setCalibrationOffset(0.0);
 #endif
-#ifdef CVENT
-  // TX20 anémomètre
-  pinMode(DATAPIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(DATAPIN), isTX20Rising, RISING);
-#endif
+
   // Serveur Web
   server.begin();
   server.on ( "/watch", watchInfo );
+  server.on ("/temp", sendTemperature);
   // Lecture des infos des capteurs initiale
   infoMeteo();
 }
@@ -303,58 +283,47 @@ void loop() {
   server.handleClient();
   // Maj
   timer.run();
-  #ifdef CPLUIE
+#ifdef CPLUIE
   // Pluie
   Rain = digitalRead(PinPluie);
-  #endif
-  #ifdef CPLUV
-  if (updateRain) {
-    // Envoi des infos à Domoticz
-    // TODO Calcul du rain rate
-    unsigned long currentTime = millis();
-    RainRate = 360000L * Plevel * (CountRain - PrevCount) / (unsigned long)(currentTime - PrevTime);	//mm*100
-    http.begin(client,"http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3561&nvalue=0&svalue=" + String(RainRate) + ";" + String(CountRain / 1000.0));
-    http.GET();
-    http.end();
-    updateRain = false;
-    PrevTime = currentTime;
-    PrevCount = CountRain;
-  }
-  #endif
-  
-  #ifdef CORAGE
+#if definded CPLUV || defined RRAIN
+  if (Rain == false && rainRate > 0) Rain = true;
+#endif
+#endif
+
+#if defined CORAGE || defined CCLOT
   // MOD1016
   if (detected) {
     translateIRQ(mod1016.getIRQ());
     detected = false;
   }
 #endif
-#ifdef CVENT
-  // TX20 anémomètre
-  if (TX20IncomingData) {
-    if (readTX20()) {
-      // Data OK
-      Wind = sa;
-      Gust = sa;
-      Dir = sb * 22.5;
-      DirS = sb;
-      float WindKMH = Wind * 0.36;
-      if (WindKMH < 4.8) {
-        WindChild = Tp + 0.2 * (0.1345 * Tp - 1.59) * WindKMH;
-      }
-      else {
-        WindChild = 13.12 + 0.6215 * Tp + (0.3965 * Tp - 11.37) * WindKMH;
-      }
-    }
-  }
-  #endif
 }
 
-#ifdef CORAGE
+#if defined CCLOT
+void watchdogCloture() {
+  nbImpact++;
+  /*  Serial.print(millis() - lastImp);
+    Serial.print(" nb: ");
+    Serial.println(nbImpact);
+  */
+  lastImp = millis();
+}
+#endif
+
+#if defined CORAGE || defined CCLOT
 ICACHE_RAM_ATTR void orage() {
   detected = true;
 }
+#endif
 
+#ifdef CCLOT
+void translateIRQ(uns8 irq) {
+  watchdogCloture();
+}
+#endif
+
+#ifdef CORAGE
 void translateIRQ(uns8 irq) {
   switch (irq) {
     case 1:
@@ -364,67 +333,13 @@ void translateIRQ(uns8 irq) {
       //Serial.println("DISTURBER DETECTED");
       break;
     case 8:
-      //Serial.println("LIGHTNING DETECTED");
+      Serial.println("LIGHTNING DETECTED");
       sendOrage();
       break;
   }
 }
 #endif
 
-#ifdef CVENT
-ICACHE_RAM_ATTR void isTX20Rising() {
-  if (!TX20IncomingData) {
-    TX20IncomingData = true;
-  }
-}
-
-boolean readTX20() {
-  int bitcount = 0;
-
-  sa = sb = sd = se = 0;
-  sc = 0; sf = 0;
-  tx20RawDataS = "";
-
-  for (bitcount = 41; bitcount > 0; bitcount--) {
-    pin = (digitalRead(DATAPIN));
-    if (!pin) {
-      tx20RawDataS += "1";
-    } else {
-      tx20RawDataS += "0";
-    }
-    if ((bitcount == 41 - 4) || (bitcount == 41 - 8) || (bitcount == 41 - 20)  || (bitcount == 41 - 24)  || (bitcount == 41 - 28)) {
-      tx20RawDataS += " ";
-    }
-    if (bitcount > 41 - 5) {
-      // start, inverted
-      sa = (sa << 1) | (pin ^ 1);
-    } else if (bitcount > 41 - 5 - 4) {
-      // wind dir, inverted
-      sb = sb >> 1 | ((pin ^ 1) << 3);
-    } else if (bitcount > 41 - 5 - 4 - 12) {
-      // windspeed, inverted
-      sc = sc >> 1 | ((pin ^ 1) << 11);
-    } else if (bitcount > 41 - 5 - 4 - 12 - 4) {
-      // checksum, inverted
-      sd = sd >> 1 | ((pin ^ 1) << 3);
-    } else if (bitcount > 41 - 5 - 4 - 12 - 4 - 4) {
-      // wind dir
-      se = se >> 1 | (pin << 3);
-    } else {
-      // windspeed
-      sf = sf >> 1 | (pin << 11);
-    }
-
-    delayMicroseconds(1220);
-  }
-  chk = ( sb + (sc & 0xf) + ((sc >> 4) & 0xf) + ((sc >> 8) & 0xf) ); chk &= 0xf;
-  delayMicroseconds(2000);  // just in case
-  TX20IncomingData = false;
-
-  if (sa == 4 && sb == se && sc == sf && sd == chk) {
-    return true;
-  } else {
-    return false;
-  }
-}
+#if defined CCLOT
+// Watchdog cloture électrique
 #endif
