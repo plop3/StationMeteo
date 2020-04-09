@@ -28,10 +28,7 @@ SimpleTimer timer;
 HTTPClient http;
 WiFiClient client;
 
-#ifndef STASSID
-#define STASSID "astro"
-#define STAPSK  "pwd"
-#endif
+#include "WiFiP.h"
 
 const char* ssid = STASSID;
 const char* password = STAPSK;
