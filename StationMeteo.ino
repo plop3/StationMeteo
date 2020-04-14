@@ -165,11 +165,9 @@ void setup() {
   IPAddress dns(192, 168, 0, 1);
   IPAddress gateway(192, 168, 0, 1);
   WiFi.config(ip, gateway, subnet, dns);
-  byte i = 5;
-  while ((WiFi.waitForConnectResult() != WL_CONNECTED) && (i > 0)) {
+  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("Connection Failed...");
     delay(5000);
-    //i--; // La station doit être connectée pour fonctionner
   }
   ArduinoOTA.setHostname("stationmeteo");
   ArduinoOTA.onStart([]() {
