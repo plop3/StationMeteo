@@ -111,7 +111,7 @@ float tsol10, tsol100;
 float humsol;
 #endif
 #ifdef CTCIEL
-float skyT, Clouds, IR, Tir;
+float skyT, Clouds, MLXambient, MLXsky;
 int cloudy; //, dewing, frezzing;
 #endif
 #if defined CPLUIE || defined CPLUV || defined RRAIN
@@ -156,8 +156,7 @@ int Delai5mn = 0;		// Timer 5mn
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-
-   // OTA
+  // OTA
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   IPAddress ip(192, 168, 0, 19);

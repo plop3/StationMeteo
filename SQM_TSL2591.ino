@@ -124,12 +124,12 @@ void SQM_TSL2591::setTemperatureCalibration (const temperatureCalibration &calib
 }
 
 void SQM_TSL2591::setTemperature (float temperature) {
-    _hasTemperature = true;
-    _temperature = temperature;
+  _hasTemperature = true;
+  _temperature = temperature;
 }
 
 void SQM_TSL2591::resetTemperature () {
-    _hasTemperature = false;
+  _hasTemperature = false;
 }
 
 void SQM_TSL2591::setGain(tsl2591Gain_t gain) {
@@ -145,23 +145,23 @@ void SQM_TSL2591::setGain(tsl2591Gain_t gain) {
   disable();
 
   switch (_gain) {
-  case TSL2591_GAIN_LOW:
-    gainValue = 1.0F;
-    break;
-  case TSL2591_GAIN_MED:
-    gainValue = 25.0F;
-    break;
-  case TSL2591_GAIN_HIGH:
-    gainValue = 425.0F;
-    break;
-  case TSL2591_GAIN_MAX:
-    gainValue = 9876.0F;
-    break;
-  default:
-    if (verbose) {
-      Serial.println("Gain not found!");
-    }
-    break;
+    case TSL2591_GAIN_LOW:
+      gainValue = 1.0F;
+      break;
+    case TSL2591_GAIN_MED:
+      gainValue = 25.0F;
+      break;
+    case TSL2591_GAIN_HIGH:
+      gainValue = 425.0F;
+      break;
+    case TSL2591_GAIN_MAX:
+      gainValue = 9876.0F;
+      break;
+    default:
+      if (verbose) {
+        Serial.println("Gain not found!");
+      }
+      break;
   }
 }
 
@@ -169,7 +169,9 @@ void SQM_TSL2591::setCalibrationOffset(float calibrationOffset) {
   _calibrationOffset = calibrationOffset;
 }
 
-tsl2591Gain_t SQM_TSL2591::getGain() { return _gain; }
+tsl2591Gain_t SQM_TSL2591::getGain() {
+  return _gain;
+}
 
 void SQM_TSL2591::setTiming(tsl2591IntegrationTime_t integration) {
   if (!_initialized) {
@@ -184,35 +186,37 @@ void SQM_TSL2591::setTiming(tsl2591IntegrationTime_t integration) {
   disable();
 
   switch (_integration) {
-  case TSL2591_INTEGRATIONTIME_100MS:
-    integrationValue = 100.F;
-    break;
-  case TSL2591_INTEGRATIONTIME_200MS:
-    integrationValue = 200.F;
-    break;
-  case TSL2591_INTEGRATIONTIME_300MS:
-    integrationValue = 300.F;
-    break;
-  case TSL2591_INTEGRATIONTIME_400MS:
-    integrationValue = 400.F;
-    break;
-  case TSL2591_INTEGRATIONTIME_500MS:
-    integrationValue = 500.F;
-    break;
-  case TSL2591_INTEGRATIONTIME_600MS:
-    integrationValue = 600.F;
-    break;
-  default: // 100ms
-    integrationValue = 999.F;
-    if (verbose) {
-      Serial.println("Integration not found!");
-      Serial.println(_integration);
-    }
-    break;
+    case TSL2591_INTEGRATIONTIME_100MS:
+      integrationValue = 100.F;
+      break;
+    case TSL2591_INTEGRATIONTIME_200MS:
+      integrationValue = 200.F;
+      break;
+    case TSL2591_INTEGRATIONTIME_300MS:
+      integrationValue = 300.F;
+      break;
+    case TSL2591_INTEGRATIONTIME_400MS:
+      integrationValue = 400.F;
+      break;
+    case TSL2591_INTEGRATIONTIME_500MS:
+      integrationValue = 500.F;
+      break;
+    case TSL2591_INTEGRATIONTIME_600MS:
+      integrationValue = 600.F;
+      break;
+    default: // 100ms
+      integrationValue = 999.F;
+      if (verbose) {
+        Serial.println("Integration not found!");
+        Serial.println(_integration);
+      }
+      break;
   }
 }
 
-tsl2591IntegrationTime_t SQM_TSL2591::getTiming() { return _integration; }
+tsl2591IntegrationTime_t SQM_TSL2591::getTiming() {
+  return _integration;
+}
 
 void SQM_TSL2591::configSensor() {
   setGain(config.gain);
@@ -255,65 +259,65 @@ uint32_t SQM_TSL2591::getFullLuminosity(void) {
 
 void SQM_TSL2591::bumpGain(int bumpDirection) {
   switch (config.gain) {
-  case TSL2591_GAIN_LOW:
-    if (bumpDirection > 0) {
-      config.gain = TSL2591_GAIN_MED;
-    } else {
-      config.gain = TSL2591_GAIN_LOW;
-    }
-    break;
-  case TSL2591_GAIN_MED:
-    if (bumpDirection > 0) {
-      config.gain = TSL2591_GAIN_HIGH;
-    } else {
-      config.gain = TSL2591_GAIN_LOW;
-    }
-    break;
-  case TSL2591_GAIN_HIGH:
-    if (bumpDirection > 0) {
-      config.gain = TSL2591_GAIN_MAX;
-    } else {
-      config.gain = TSL2591_GAIN_MED;
-    }
-    break;
-  case TSL2591_GAIN_MAX:
-    if (bumpDirection > 0) {
-      config.gain = TSL2591_GAIN_MAX;
-    } else {
-      config.gain = TSL2591_GAIN_HIGH;
-    }
-    break;
-  default:
-    break;
+    case TSL2591_GAIN_LOW:
+      if (bumpDirection > 0) {
+        config.gain = TSL2591_GAIN_MED;
+      } else {
+        config.gain = TSL2591_GAIN_LOW;
+      }
+      break;
+    case TSL2591_GAIN_MED:
+      if (bumpDirection > 0) {
+        config.gain = TSL2591_GAIN_HIGH;
+      } else {
+        config.gain = TSL2591_GAIN_LOW;
+      }
+      break;
+    case TSL2591_GAIN_HIGH:
+      if (bumpDirection > 0) {
+        config.gain = TSL2591_GAIN_MAX;
+      } else {
+        config.gain = TSL2591_GAIN_MED;
+      }
+      break;
+    case TSL2591_GAIN_MAX:
+      if (bumpDirection > 0) {
+        config.gain = TSL2591_GAIN_MAX;
+      } else {
+        config.gain = TSL2591_GAIN_HIGH;
+      }
+      break;
+    default:
+      break;
   }
   setGain(config.gain);
 }
 
 void SQM_TSL2591::bumpTime(int bumpDirection) {
   switch (config.time) {
-  case TSL2591_INTEGRATIONTIME_200MS:
-    if (bumpDirection > 0) {
-      config.time = TSL2591_INTEGRATIONTIME_400MS;
-    } else {
-      config.time = TSL2591_INTEGRATIONTIME_200MS;
-    }
-    break;
-  case TSL2591_INTEGRATIONTIME_400MS:
-    if (bumpDirection > 0) {
-      config.time = TSL2591_INTEGRATIONTIME_600MS;
-    } else {
-      config.time = TSL2591_INTEGRATIONTIME_200MS;
-    }
-    break;
-  case TSL2591_INTEGRATIONTIME_600MS:
-    if (bumpDirection > 0) {
-      config.time = TSL2591_INTEGRATIONTIME_600MS;
-    } else {
-      config.time = TSL2591_INTEGRATIONTIME_400MS;
-    }
-    break;
-  default:
-    break;
+    case TSL2591_INTEGRATIONTIME_200MS:
+      if (bumpDirection > 0) {
+        config.time = TSL2591_INTEGRATIONTIME_400MS;
+      } else {
+        config.time = TSL2591_INTEGRATIONTIME_200MS;
+      }
+      break;
+    case TSL2591_INTEGRATIONTIME_400MS:
+      if (bumpDirection > 0) {
+        config.time = TSL2591_INTEGRATIONTIME_600MS;
+      } else {
+        config.time = TSL2591_INTEGRATIONTIME_200MS;
+      }
+      break;
+    case TSL2591_INTEGRATIONTIME_600MS:
+      if (bumpDirection > 0) {
+        config.time = TSL2591_INTEGRATIONTIME_600MS;
+      } else {
+        config.time = TSL2591_INTEGRATIONTIME_400MS;
+      }
+      break;
+    default:
+      break;
   }
   setTiming(config.time);
 }
@@ -321,20 +325,20 @@ void SQM_TSL2591::bumpTime(int bumpDirection) {
 void SQM_TSL2591::calibrateReadingsForTemperature(uint16_t &ir, uint16_t &full) {
   if (_hasTemperature) {
     if (verbose) {
-        Serial.print("Values before temperature calibration: ir=");
-        Serial.print(ir);
-        Serial.print(", full=");
-        Serial.println(full);
+      Serial.print("Values before temperature calibration: ir=");
+      Serial.print(ir);
+      Serial.print(", full=");
+      Serial.println(full);
     }
     float irCalibrationFactor = _temperature * _temperatureCalibration.irSlope + _temperatureCalibration.irIntercept;
     float fullCalibrationFactor = _temperature * _temperatureCalibration.fullLuminositySlope + _temperatureCalibration.fullLuminosityIntercept;
     ir   = static_cast<uint16_t>(static_cast<float>(ir) * irCalibrationFactor);
     full = static_cast<uint16_t>(static_cast<float>(full) * fullCalibrationFactor);
     if (verbose) {
-        Serial.print("Values after temperature calibration: ir=");
-        Serial.print(ir);
-        Serial.print(", full=");
-        Serial.println(full);
+      Serial.print("Values after temperature calibration: ir=");
+      Serial.print(ir);
+      Serial.print(", full=");
+      Serial.println(full);
     }
 
   }
@@ -513,48 +517,48 @@ float SQM_TSL2591::calculateLux(uint16_t ch0, uint16_t ch1) /*wbp*/
   // provided by AMS and may need to be updated in the future
 
   switch (_integration) {
-  case TSL2591_INTEGRATIONTIME_100MS:
-    atime = 100.0F;
-    break;
-  case TSL2591_INTEGRATIONTIME_200MS:
-    atime = 200.0F;
-    break;
-  case TSL2591_INTEGRATIONTIME_300MS:
-    atime = 300.0F;
-    break;
-  case TSL2591_INTEGRATIONTIME_400MS:
-    atime = 400.0F;
-    break;
-  case TSL2591_INTEGRATIONTIME_500MS:
-    atime = 500.0F;
-    break;
-  case TSL2591_INTEGRATIONTIME_600MS:
-    atime = 600.0F;
-    break;
-  default: // 200ms
-    atime = 200.0F;
-    break;
+    case TSL2591_INTEGRATIONTIME_100MS:
+      atime = 100.0F;
+      break;
+    case TSL2591_INTEGRATIONTIME_200MS:
+      atime = 200.0F;
+      break;
+    case TSL2591_INTEGRATIONTIME_300MS:
+      atime = 300.0F;
+      break;
+    case TSL2591_INTEGRATIONTIME_400MS:
+      atime = 400.0F;
+      break;
+    case TSL2591_INTEGRATIONTIME_500MS:
+      atime = 500.0F;
+      break;
+    case TSL2591_INTEGRATIONTIME_600MS:
+      atime = 600.0F;
+      break;
+    default: // 200ms
+      atime = 200.0F;
+      break;
   }
 
   switch (_gain) {
-  case TSL2591_GAIN_LOW:
-    //      again = 1.0F;
-    again = 1.03F; /*wbp*/
-    break;
-  case TSL2591_GAIN_MED:
-    again = 25.0F;
-    break;
-  case TSL2591_GAIN_HIGH:
-    //      again = 428.0F;
-    again = 425.0F; /*wbp*/
-    break;
-  case TSL2591_GAIN_MAX:
-    //      again = 9876.0F;
-    again = 7850.0F; /*wbp*/
-    break;
-  default:
-    again = 1.0F;
-    break;
+    case TSL2591_GAIN_LOW:
+      //      again = 1.0F;
+      again = 1.03F; /*wbp*/
+      break;
+    case TSL2591_GAIN_MED:
+      again = 25.0F;
+      break;
+    case TSL2591_GAIN_HIGH:
+      //      again = 428.0F;
+      again = 425.0F; /*wbp*/
+      break;
+    case TSL2591_GAIN_MAX:
+      //      again = 9876.0F;
+      again = 7850.0F; /*wbp*/
+      break;
+    default:
+      again = 1.0F;
+      break;
   }
 
   // cpl = (ATIME * AGAIN) / DF

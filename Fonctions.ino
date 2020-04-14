@@ -39,8 +39,8 @@ void infoMeteo() {
 void mesureCapteurs() {
 #ifdef CTCIEL
   // MLX
-  Tir = mlx.readAmbientTempC();
-  IR = mlx.readObjectTempC();
+  MLXambient = mlx.readAmbientTempC();
+  MLXsky = mlx.readObjectTempC();
   Clouds = cloudIndex();
   skyT = skyTemp();
   if (Clouds > CLOUD_FLAG_PERCENT) {
@@ -189,8 +189,8 @@ double dewPoint(double celsius, double humidity)
 #ifdef CTCIEL
 double skyTemp() {
   //Constant defined above
-  double Td = (K1 / 100.) * (Tir - K2 / 10) + (K3 / 100.) * pow((exp (K4 / 1000.* Tir)) , (K5 / 100.));
-  double Tsky = T - Td;
+  double Td = (K1 / 100.) * (MLXambient - K2 / 10) + (K3 / 100.) * pow((exp (K4 / 1000.* MLXambient)) , (K5 / 100.));
+  double Tsky = MLXsky - Td;
   return Tsky;
 }
 
