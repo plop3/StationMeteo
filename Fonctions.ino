@@ -30,7 +30,7 @@ void infoMeteo() {
     Delai5mn = 0;
 
 #ifdef CCLOT
-    sendAlerteClot(alerteClot);
+    //sendAlerteClot(alerteClot);
 #endif
 
   }
