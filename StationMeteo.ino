@@ -205,6 +205,10 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+// Résistances de rappel I2c
+pinMode(D1, INPUT_PULLUP);
+pinMode(D2, INPUT_PULLUP);
+
 #ifdef CTCIEL
   // MLX
   mlx.begin();

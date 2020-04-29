@@ -1,0 +1,14 @@
+Picked up JAVA_TOOL_OPTIONS: 
+Chargement de la configuration
+Initialisation des paquets...
+Préparation des cartes
+Vérification...
+/home/serge/Documents/Projets/StationMeteo/Fonctions.ino: In function 'void mesureCapteurs()':
+Fonctions:84:3: error: 'sensors' was not declared in this scope
+   sensors.requestTemperatures();
+   ^
+/home/serge/Documents/Projets/StationMeteo/SQM_TSL2591.ino: In member function 'void SQM_TSL2591::takeReading()':
+/home/serge/Documents/Projets/StationMeteo/SQM_TSL2591.ino:446:9: warning: unused variable 'IR' [-Wunused-variable]
+   float IR = (float)ir / (gainValue * integrationValue / 200.F * niter);
+         ^
+exit status 1

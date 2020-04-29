@@ -110,6 +110,11 @@ void mesureCapteurs() {
 }
 
 void envoiHTTP() {
+  if (Tp<-100) {
+    // Redémarre l'ESP en cas de problème avec le MLX
+    //ESP.restart();
+    return;
+  }
   Serial.println("Envoi données");
   // Baromètre
   if (http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3556&nvalue=0&svalue=" + String(Tp) + ";" + String(HR) + ";0;" + String(P / 100) + ";" + String(forecast))) {
