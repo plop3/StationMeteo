@@ -90,7 +90,7 @@ boolean SQM_TSL2591::begin(void) {
   // Note: by default, the device is in power down mode on bootup
   disable();
 
-  verbose = true;
+  verbose = false;
 
   return _initialized;
 }

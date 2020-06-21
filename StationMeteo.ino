@@ -165,7 +165,7 @@ void setup() {
   IPAddress gateway(192, 168, 0, 1);
   WiFi.config(ip, gateway, subnet, dns);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("Connection Failed...");
+    //Serial.println("Connection Failed...");
     delay(5000);
   }
   ArduinoOTA.setHostname("stationmeteo");
@@ -178,40 +178,40 @@ void setup() {
     }
 
     // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-    Serial.println("Start updating " + type);
+    //Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
+    //Serial.println("\nEnd");
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    //Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
   ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
+    //Serial.printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) {
-      Serial.println("Auth Failed");
+      //Serial.println("Auth Failed");
     } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println("Begin Failed");
+      //Serial.println("Begin Failed");
     } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println("Connect Failed");
+      //Serial.println("Connect Failed");
     } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println("Receive Failed");
+      //Serial.println("Receive Failed");
     } else if (error == OTA_END_ERROR) {
-      Serial.println("End Failed");
+      //Serial.println("End Failed");
     }
   });
   ArduinoOTA.begin();
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  //Serial.println("Ready");
+  //Serial.print("IP address: ");
+  //Serial.println(WiFi.localIP());
 
-// Résistances de rappel I2c
-pinMode(D1, INPUT_PULLUP);
-pinMode(D2, INPUT_PULLUP);
+  // Résistances de rappel I2c
+  pinMode(D1, INPUT_PULLUP);
+  pinMode(D2, INPUT_PULLUP);
 
 #ifdef CTCIEL
   // MLX
-  mlx.begin();
+  //mlx.begin();
 #endif
   // BME280
   bme.begin(0x76);
@@ -296,6 +296,20 @@ void loop() {
     detected = false;
   }
 #endif
+#ifdef CTCIEL
+  if (Serial.available()) {
+    String TCint = Serial.readStringUntil(':');
+    MLXsky = Serial.readString().toInt();
+    MLXambient = Tp;
+    Clouds = cloudIndex();
+    skyT = skyTemp();
+    if (Clouds > CLOUD_FLAG_PERCENT) {
+      cloudy = 1;
+    } else {
+      cloudy = 0;
+    }
+  }
+#endif
 }
 
 #if defined CCLOT
@@ -331,7 +345,7 @@ void translateIRQ(uns8 irq) {
       //Serial.println("DISTURBER DETECTED");
       break;
     case 8:
-      Serial.println("LIGHTNING DETECTED");
+      //Serial.println("LIGHTNING DETECTED");
       sendOrage();
       break;
   }

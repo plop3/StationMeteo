@@ -39,7 +39,7 @@ void infoMeteo() {
 void mesureCapteurs() {
 #ifdef CTCIEL
   // MLX
-  MLXambient = mlx.readAmbientTempC();
+/*  MLXambient = mlx.readAmbientTempC();
   MLXsky = mlx.readObjectTempC();
   Clouds = cloudIndex();
   skyT = skyTemp();
@@ -48,6 +48,7 @@ void mesureCapteurs() {
   } else {
     cloudy = 0;
   }
+*/
 #endif
   // BME280
   Tp = int(bme.readTemperature() * 10) / 10.0;
@@ -111,7 +112,7 @@ void mesureCapteurs() {
 
 void envoiHTTP() {
 
-  Serial.println("Envoi données");
+  //Serial.println("Envoi données");
   // Baromètre
   if (http.begin(client, "http://192.168.0.7:8080/json.htm?type=command&param=udevice&idx=3556&nvalue=0&svalue=" + String(Tp) + ";" + String(HR) + ";0;" + String(P / 100) + ";" + String(forecast))) {
     http.GET();
@@ -190,7 +191,7 @@ double dewPoint(double celsius, double humidity)
 #ifdef CTCIEL
 double skyTemp() {
   //Constant defined above
-  double Td = (K1 / 100.) * (MLXambient - K2 / 10) + (K3 / 100.) * pow((exp (K4 / 1000.* MLXambient)) , (K5 / 100.));
+  double Td = (K1 / 100.) * (MLXambient - K2 / 10.) + (K3 / 100.) * pow((exp (K4 / 1000.* MLXambient)) , (K5 / 100.));
   double Tsky = MLXsky - Td;
   return Tsky;
 }
@@ -207,7 +208,7 @@ double cloudIndex() {
 #endif
 
 void watchInfo() {
-  Serial.println("Envoi Web");
+  //Serial.println("Envoi Web");
   String Page = "Text=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\nFore=" + String(forecast);
 #ifdef CTCIEL
   Page = Page + "\nTciel=" + String(skyT) + "\nCouvN=" + String(Clouds);
@@ -220,6 +221,9 @@ void watchInfo() {
 #endif
 #ifdef CUV
   Page = Page + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
+#endif
+#ifdef CSQM
+  Page = Page + "\nSQM=" +String(mag_arcsec2);
 #endif
 #ifdef RVENT
   Page = Page + "\nVent=" + Wind;
@@ -260,8 +264,8 @@ int getRain() {
   http.begin(client, "http://192.168.0.14/rain");
   if (http.GET() == 200) {
     int rainRate = http.getString().toInt();
-    Serial.print("Rain: ");
-    Serial.println(rainRate);
+    //Serial.print("Rain: ");
+    //Serial.println(rainRate);
   }
   else rainRate = 0;
   http.end();
