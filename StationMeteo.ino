@@ -300,6 +300,9 @@ void loop() {
   if (Serial.available()) {
     String TCint = Serial.readStringUntil(':');
     MLXsky = Serial.readString().toInt();
+    if (MLXsky < -60 || MLXsky > 40) {
+      MLXsky = 10;
+    }
     MLXambient = Tp;
     Clouds = cloudIndex();
     skyT = skyTemp();
