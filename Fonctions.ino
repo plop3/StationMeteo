@@ -217,7 +217,7 @@ void watchInfo() {
   Page = Page + "\nPluie=" + String(Rain);
 #endif
 #ifdef CLUM
-  Page = Page + "\nlum=" + String(luminosite);
+  Page = Page + "\nLum=" + String(luminosite);
 #endif
 #ifdef CUV
   Page = Page + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
