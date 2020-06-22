@@ -39,16 +39,16 @@ void infoMeteo() {
 void mesureCapteurs() {
 #ifdef CTCIEL
   // MLX
-/*  MLXambient = mlx.readAmbientTempC();
-  MLXsky = mlx.readObjectTempC();
-  Clouds = cloudIndex();
-  skyT = skyTemp();
-  if (Clouds > CLOUD_FLAG_PERCENT) {
-    cloudy = 1;
-  } else {
-    cloudy = 0;
-  }
-*/
+  /*  MLXambient = mlx.readAmbientTempC();
+    MLXsky = mlx.readObjectTempC();
+    Clouds = cloudIndex();
+    skyT = skyTemp();
+    if (Clouds > CLOUD_FLAG_PERCENT) {
+      cloudy = 1;
+    } else {
+      cloudy = 0;
+    }
+  */
 #endif
   // BME280
   Tp = int(bme.readTemperature() * 10) / 10.0;
@@ -223,7 +223,7 @@ void watchInfo() {
   Page = Page + "\nUV=" + String(UVindex) + "\nIR=" + String(ir);
 #endif
 #ifdef CSQM
-  Page = Page + "\nSQM=" +String(mag_arcsec2);
+  Page = Page + "\nSQM=" + String(mag_arcsec2);
 #endif
 #ifdef RVENT
   Page = Page + "\nVent=" + Wind;
@@ -307,3 +307,52 @@ void sendAlerteClot(bool etat) {
   http.end();
 }
 #endif
+
+// MySQMpro
+void skytempreadrequest(WiFiClient client) {
+  String rxstring = String(skyT) + ";" + String(Clouds);
+  client.println(rxstring);
+}
+
+void skycouvrequest(WiFiClient client) {
+  client.println(Clouds);
+}
+
+void sqmsendreadrequest(WiFiClient client) {
+  char tempStr[14];
+  String rxString = "r, ";
+  String tmp = "";
+  if (mag_arcsec2 < 10.0) {
+    rxString = rxString + "0";
+  }
+  rxString = rxString + String(mag_arcsec2, 2) + "m,";
+  memset(tempStr, 0, 12);
+  tmp = "";
+  sprintf( tempStr, "%lu", 20000L );
+  int index = strlen(tempStr);
+  while ( index < 10)
+  {
+    tmp = tmp + "0";
+    index++;
+  }
+  rxString = rxString + tmp + tempStr;
+  rxString = rxString + "Hz,";
+  // period of sensor in counts, period of sensor in seconds,
+  rxString = rxString + "0000000020c,0000000.000s, ";
+  tmp = String(Tp, 1) + 'C';
+  while ( tmp.length() < 6)
+  {
+    tmp = '0' + tmp;
+  }
+  rxString = rxString + tmp;
+  client.println(rxString);
+}
+
+void sqmsendcalibrationrequest(WiFiClient client) {
+  String rxString = "c,00000017.60m,0000000.000s, 020.0C,00000008.71m, 020.0C";
+  client.println(rxString);
+}
+
+void sqmsendinforequest(WiFiClient client) {
+  client.println("i,00000002,00000003,00000001,00000413");
+}

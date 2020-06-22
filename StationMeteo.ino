@@ -28,6 +28,9 @@ SimpleTimer timer;
 HTTPClient http;
 WiFiClient client;
 
+// Serveur Telnet (SQM)
+WiFiServer wifiServer(2121);
+WiFiClient client2;
 #include "WiFiP.h"
 
 const char* ssid = STASSID;
@@ -264,6 +267,9 @@ void setup() {
   sqm.setCalibrationOffset(0.0);
 #endif
 
+  // Serveur telnet
+  wifiServer.begin();
+
   // Serveur Web
   server.begin();
   server.on ( "/watch", watchInfo );
@@ -313,48 +319,82 @@ void loop() {
     }
   }
 #endif
+
+  // Telnet
+  if (wifiServer.hasClient()) {
+    if (!client2 || !client2.connected()) {
+      if (client2) client2.stop();
+      client2 = wifiServer.available();
+    } else {
+      wifiServer.available().stop();
+    }
+  }
+  if (client2.available() > 0) {
+    //while (client.connected()) {
+    //  while (client.available()>0) {
+    char c = client2.read();
+    switch (c) {
+      case 'r':
+        sqmsendreadrequest(client2);
+        break;
+      case 'i':
+        sqmsendinforequest(client2);
+        break;
+      case 'c':
+        sqmsendcalibrationrequest(client2);
+        break;
+      case 't':
+        skytempreadrequest(client2);
+        break;
+      case 'n':
+        skycouvrequest(client2);
+        break;
+    }
+  }
+  //client.stop();
 }
 
+
 #if defined CCLOT
-void watchdogCloture() {
-  nbImpact++;
-  /*  Serial.print(millis() - lastImp);
-    Serial.print(" nb: ");
-    Serial.println(nbImpact);
-  */
-  lastImp = millis();
-}
+  void watchdogCloture() {
+    nbImpact++;
+    /*  Serial.print(millis() - lastImp);
+      Serial.print(" nb: ");
+      Serial.println(nbImpact);
+    */
+    lastImp = millis();
+  }
 #endif
 
 #if defined CORAGE || defined CCLOT
-ICACHE_RAM_ATTR void orage() {
-  detected = true;
-}
+  ICACHE_RAM_ATTR void orage() {
+    detected = true;
+  }
 #endif
 
 #ifdef CCLOT
-void translateIRQ(uns8 irq) {
-  watchdogCloture();
-}
+  void translateIRQ(uns8 irq) {
+    watchdogCloture();
+  }
 #endif
 
 #ifdef CORAGE
-void translateIRQ(uns8 irq) {
-  switch (irq) {
-    case 1:
-      //Serial.println("NOISE DETECTED");
-      break;
-    case 4:
-      //Serial.println("DISTURBER DETECTED");
-      break;
-    case 8:
-      //Serial.println("LIGHTNING DETECTED");
-      sendOrage();
-      break;
+  void translateIRQ(uns8 irq) {
+    switch (irq) {
+      case 1:
+        //Serial.println("NOISE DETECTED");
+        break;
+      case 4:
+        //Serial.println("DISTURBER DETECTED");
+        break;
+      case 8:
+        //Serial.println("LIGHTNING DETECTED");
+        sendOrage();
+        break;
+    }
   }
-}
 #endif
 
 #if defined CCLOT
-// Watchdog cloture électrique
+  // Watchdog cloture électrique
 #endif
