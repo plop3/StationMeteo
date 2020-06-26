@@ -191,7 +191,7 @@ double dewPoint(double celsius, double humidity)
 #ifdef CTCIEL
 double skyTemp() {
   //Constant defined above
-  double Td = (K1 / 100.) * (MLXambient - K2 / 10.) + (K3 / 100.) * pow((exp (K4 / 1000.* MLXambient)) , (K5 / 100.));
+  double Td = (K1 / 100.) * (MLXambient - K2 / 10.) + (K3 / 100.) * pow(exp (K4 / 1000.* MLXambient) , (K5 / 100.));
   double Tsky = MLXsky - Td;
   return Tsky;
 }
@@ -212,6 +212,8 @@ void watchInfo() {
   String Page = "Text=" + String(Tp) + "\nHext=" + String(HR) + "\nPres=" + String(P / 100) + "\nDew=" + String(Dew) + "\nFore=" + String(forecast);
 #ifdef CTCIEL
   Page = Page + "\nTciel=" + String(skyT) + "\nCouvN=" + String(Clouds);
+  Page = Page + "\nTir=" + String(MLXsky);
+    
 #endif
 #if defined CPLUIE || defined RRAIN
   Page = Page + "\nPluie=" + String(Rain);

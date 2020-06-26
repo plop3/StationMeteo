@@ -38,11 +38,11 @@ const char* password = STAPSK;
 
 #ifdef CTCIEL
 // MLX
-#define  K1 33.
-#define  K2 0.
-#define  K3 4.
-#define  K4 100.
-#define  K5 100.
+#define  K1 33.0
+#define  K2 0.0
+#define  K3 4.0
+#define  K4 100.0
+#define  K5 100.0
 #include "Adafruit_MLX90614.h"
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 #endif
@@ -309,8 +309,8 @@ void loop() {
     if (MLXsky < -60 || MLXsky > 40) {
       MLXsky = 10;
     }
-    //MLXambient = Tp;
-    MLXambient = TCint.toInt();
+    MLXambient = Tp;
+    //MLXambient = TCint.toInt();
     Clouds = cloudIndex();
     skyT = skyTemp();
     if (Clouds > CLOUD_FLAG_PERCENT) {
