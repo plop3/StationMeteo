@@ -213,7 +213,7 @@ void watchInfo() {
 #ifdef CTCIEL
   Page = Page + "\nTciel=" + String(skyT) + "\nCouvN=" + String(Clouds);
   Page = Page + "\nTir=" + String(MLXsky);
-    
+
 #endif
 #if defined CPLUIE || defined RRAIN
   Page = Page + "\nPluie=" + String(Rain);
@@ -231,6 +231,10 @@ void watchInfo() {
   Page = Page + "\nVent=" + Wind;
   Page = Page + "\nRaf=" + Gust;
 #endif
+#ifdef CCLOT
+  Page = Page + "\nNbimp=" + nbImpact;
+#endif
+
   server.send ( 200, "text/plain", Page);
 }
 
@@ -312,12 +316,13 @@ void sendAlerteClot(bool etat) {
 
 // MySQMpro
 void skytempreadrequest(WiFiClient client) {
-  String rxstring = String(skyT) + ";" + String(Clouds);
-  client.println(rxstring);
+  //String rxstring = String(skyT) + ";" + String(Clouds);
+  //client.println(rxstring);
 }
 
+// TODO Dummy valeurs si pas CTCIEL
 void skycouvrequest(WiFiClient client) {
-  client.println(Clouds);
+  //client.println(Clouds);
 }
 
 void sqmsendreadrequest(WiFiClient client) {
