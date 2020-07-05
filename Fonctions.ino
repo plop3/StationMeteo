@@ -191,7 +191,7 @@ double dewPoint(double celsius, double humidity)
 #ifdef CTCIEL
 double skyTemp() {
   //Constant defined above
-  double Td = (K1 / 100.) * (MLXambient - K2 / 10.) + (K3 / 100.) * pow(exp ((K4 / 1000.) * MLXambient) , (K5 / 100.));
+  double Td = (K1 / 100.) * (MLXambient - K2 / 10.) + (K3 / 100.) * pow((exp (K4 / 1000. * MLXambient)) , (K5 / 100.));
   double Tsky = MLXsky - Td;
   return Tsky;
 }

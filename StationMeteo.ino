@@ -304,22 +304,22 @@ void loop() {
 #endif
 #ifdef CTCIEL
   if (Serial.available()) {
-    String TCint = Serial.readStringUntil(':');
-    MLXsky = Serial.readStringUntil('\n').toDouble();
-    if (MLXsky < -60 || MLXsky > 40) {
-      MLXsky = 10;
-    }
+    double TCint = Serial.readStringUntil(':').toDouble();
+    double tsky = Serial.readStringUntil('\n').toDouble();
+    if (tsky != 0 && tsky > -60 && tsky < 40) {
 
+      MLXsky = tsky;
+    }
     //MLXambient = Tp;
-    MLXambient = TCint.toDouble();
-    if (MLXambient != 0 || MLXsky != 0) {
-      Clouds = cloudIndex();
-      skyT = skyTemp();
-      if (Clouds > CLOUD_FLAG_PERCENT) {
-        cloudy = 1;
-      } else {
-        cloudy = 0;
-      }
+    if (TCint != 0) {
+      MLXambient = TCint;
+    }
+    Clouds = cloudIndex();
+    skyT = skyTemp();
+    if (Clouds > CLOUD_FLAG_PERCENT) {
+      cloudy = 1;
+    } else {
+      cloudy = 0;
     }
   }
 #endif
