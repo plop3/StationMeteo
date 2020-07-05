@@ -313,7 +313,6 @@ void loop() {
     //MLXambient = Tp;
     MLXambient = TCint.toDouble();
     if (MLXambient != 0 || MLXsky != 0) {
-      if (MLXambient == 0) MLXambient = 0.01;
       Clouds = cloudIndex();
       skyT = skyTemp();
       if (Clouds > CLOUD_FLAG_PERCENT) {
