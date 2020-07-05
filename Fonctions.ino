@@ -197,12 +197,11 @@ double skyTemp() {
 }
 
 double cloudIndex() {
-  double Tcloudy = CLOUD_TEMP_OVERCAST, Tclear = CLOUD_TEMP_CLEAR;
-  double Tsky = skyTemp();
+  double Tsky = MLXsky;
   double Index;
-  if (Tsky < Tclear) Tsky = Tclear;
-  if (Tsky > Tcloudy) Tsky = Tcloudy;
-  Index = (Tsky - Tclear) * 100 / (Tcloudy - Tclear);
+  if (Tsky < CLOUD_TEMP_CLEAR) Tsky = CLOUD_TEMP_CLEAR;
+  if (Tsky > CLOUD_TEMP_OVERCAST) Tsky = CLOUD_TEMP_OVERCAST;
+  Index = (Tsky - CLOUD_TEMP_CLEAR) * 100 / (CLOUD_TEMP_OVERCAST - CLOUD_TEMP_CLEAR);
   return Index;
 }
 #endif

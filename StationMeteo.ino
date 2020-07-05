@@ -114,7 +114,7 @@ float tsol10, tsol100;
 float humsol;
 #endif
 #ifdef CTCIEL
-float skyT, Clouds, MLXambient, MLXsky;
+double skyT, Clouds, MLXambient, MLXsky;
 int cloudy; //, dewing, frezzing;
 #endif
 #if defined CPLUIE || defined CPLUV || defined RRAIN
@@ -305,12 +305,12 @@ void loop() {
 #ifdef CTCIEL
   if (Serial.available()) {
     String TCint = Serial.readStringUntil(':');
-    MLXsky = Serial.readString().toInt();
+    MLXsky = Serial.readStringUntil('\n').toDouble();
     if (MLXsky < -60 || MLXsky > 40) {
       MLXsky = 10;
     }
-    MLXambient = Tp;
-    //MLXambient = TCint.toInt();
+    //MLXambient = Tp;
+    MLXambient = TCint.toDouble();
     Clouds = cloudIndex();
     skyT = skyTemp();
     if (Clouds > CLOUD_FLAG_PERCENT) {
