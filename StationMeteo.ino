@@ -309,14 +309,18 @@ void loop() {
     if (MLXsky < -60 || MLXsky > 40) {
       MLXsky = 10;
     }
+
     //MLXambient = Tp;
     MLXambient = TCint.toDouble();
-    Clouds = cloudIndex();
-    skyT = skyTemp();
-    if (Clouds > CLOUD_FLAG_PERCENT) {
-      cloudy = 1;
-    } else {
-      cloudy = 0;
+    if (MLXambient != 0 || MLXsky != 0) {
+      if (MLXambient == 0) MLXambient = 0.01;
+      Clouds = cloudIndex();
+      skyT = skyTemp();
+      if (Clouds > CLOUD_FLAG_PERCENT) {
+        cloudy = 1;
+      } else {
+        cloudy = 0;
+      }
     }
   }
 #endif
@@ -357,45 +361,45 @@ void loop() {
 
 
 #if defined CCLOT
-  void watchdogCloture() {
-    nbImpact++;
-    /*  Serial.print(millis() - lastImp);
-      Serial.print(" nb: ");
-      Serial.println(nbImpact);
-    */
-    lastImp = millis();
-  }
+void watchdogCloture() {
+  nbImpact++;
+  /*  Serial.print(millis() - lastImp);
+    Serial.print(" nb: ");
+    Serial.println(nbImpact);
+  */
+  lastImp = millis();
+}
 #endif
 
 #if defined CORAGE || defined CCLOT
-  ICACHE_RAM_ATTR void orage() {
-    detected = true;
-  }
+ICACHE_RAM_ATTR void orage() {
+  detected = true;
+}
 #endif
 
 #ifdef CCLOT
-  void translateIRQ(uns8 irq) {
-    watchdogCloture();
-  }
+void translateIRQ(uns8 irq) {
+  watchdogCloture();
+}
 #endif
 
 #ifdef CORAGE
-  void translateIRQ(uns8 irq) {
-    switch (irq) {
-      case 1:
-        //Serial.println("NOISE DETECTED");
-        break;
-      case 4:
-        //Serial.println("DISTURBER DETECTED");
-        break;
-      case 8:
-        //Serial.println("LIGHTNING DETECTED");
-        sendOrage();
-        break;
-    }
+void translateIRQ(uns8 irq) {
+  switch (irq) {
+    case 1:
+      //Serial.println("NOISE DETECTED");
+      break;
+    case 4:
+      //Serial.println("DISTURBER DETECTED");
+      break;
+    case 8:
+      //Serial.println("LIGHTNING DETECTED");
+      sendOrage();
+      break;
   }
+}
 #endif
 
 #if defined CCLOT
-  // Watchdog cloture électrique
+// Watchdog cloture électrique
 #endif
