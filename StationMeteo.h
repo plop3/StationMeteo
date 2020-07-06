@@ -22,7 +22,7 @@
 #define CLUM	    // BH1750
 #define CTCIEL	  // MLX90614
 #define	CSQM	   // TSL2591
-//#define CCLOT     // Cloture électrique
+#define CCLOT     // Cloture électrique
 //#define CORAGE	 // MOD-1016
 //#define CPLUIE	 // Capteur de pluie infrarouge
 //#define CTSOL	   // 1-wire
