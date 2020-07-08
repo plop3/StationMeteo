@@ -275,7 +275,7 @@ void setup() {
   server.on ( "/watch", watchInfo );
   server.on ("/temp", sendTemperature);
   // Lecture des infos des capteurs initiale
-  infoMeteo();
+  //infoMeteo();
 }
 
 //----------------------------------------
@@ -314,8 +314,9 @@ void loop() {
     if (TCint != 0) {
       MLXambient = TCint;
     }
-    Clouds = cloudIndex();
-    skyT = skyTemp();
+    skyT = skyTemp(MLXsky, MLXambient);
+    Clouds = cloudIndex(skyT);
+    
     if (Clouds > CLOUD_FLAG_PERCENT) {
       cloudy = 1;
     } else {

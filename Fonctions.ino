@@ -189,15 +189,14 @@ double dewPoint(double celsius, double humidity)
 }
 
 #ifdef CTCIEL
-double skyTemp() {
+double skyTemp(double MLXsky, double MLXambient) {
   //Constant defined above
   double Td = (K1 / 100.) * (MLXambient - K2 / 10.) + (K3 / 100.) * pow((exp (K4 / 1000. * MLXambient)) , (K5 / 100.));
   double Tsky = MLXsky - Td;
   return Tsky;
 }
 
-double cloudIndex() {
-  double Tsky = MLXsky;
+double cloudIndex(double Tsky) {
   double Index;
   if (Tsky < CLOUD_TEMP_CLEAR) Tsky = CLOUD_TEMP_CLEAR;
   if (Tsky > CLOUD_TEMP_OVERCAST) Tsky = CLOUD_TEMP_OVERCAST;
