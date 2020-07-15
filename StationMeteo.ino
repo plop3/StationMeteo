@@ -276,6 +276,8 @@ void setup() {
   server.on ("/temp", sendTemperature);
   // Lecture des infos des capteurs initiale
   //infoMeteo();
+  // MAJ Alerte cloture
+  sendAlerteClot(false);
 }
 
 //----------------------------------------

@@ -93,6 +93,7 @@ void mesureCapteurs() {
   // SQM
   sqm.takeReading();
   mag_arcsec2 = sqm.mpsas;
+  if (mag_arcsec2 <0 || mag_arcsec2 > 40) mag_arcsec2=0;
   /*
     sqm.full()
     sqm.ir()
