@@ -318,7 +318,7 @@ void loop() {
     }
     skyT = skyTemp(MLXsky, MLXambient);
     Clouds = cloudIndex(skyT);
-    
+
     if (Clouds > CLOUD_FLAG_PERCENT) {
       cloudy = 1;
     } else {
@@ -327,6 +327,7 @@ void loop() {
   }
 #endif
 
+#ifdef CSQM
   // Telnet
   if (wifiServer.hasClient()) {
     if (!client2 || !client2.connected()) {
@@ -359,6 +360,7 @@ void loop() {
     }
   }
   //client.stop();
+#endif
 }
 
 

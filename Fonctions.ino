@@ -324,6 +324,7 @@ void skycouvrequest(WiFiClient client) {
   //client.println(Clouds);
 }
 
+#ifdef CSQM
 void sqmsendreadrequest(WiFiClient client) {
   char tempStr[14];
   String rxString = "r, ";
@@ -331,6 +332,7 @@ void sqmsendreadrequest(WiFiClient client) {
   if (mag_arcsec2 < 10.0) {
     rxString = rxString + "0";
   }
+  
   rxString = rxString + String(mag_arcsec2, 2) + "m,";
   memset(tempStr, 0, 12);
   tmp = "";
@@ -362,3 +364,5 @@ void sqmsendcalibrationrequest(WiFiClient client) {
 void sqmsendinforequest(WiFiClient client) {
   client.println("i,00000002,00000003,00000001,00000413");
 }
+
+#endif
